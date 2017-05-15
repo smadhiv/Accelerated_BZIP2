@@ -31,3 +31,6 @@
 # Debug files
 *.dSYM/
 *.su
+
+# Folders
+/MultiTableHuffman/bin
