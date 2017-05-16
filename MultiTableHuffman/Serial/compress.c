@@ -1,8 +1,14 @@
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//Sriram Madhivanan
+//huffman serial Implementation
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
 #include "../include/serialHeader.h"
+
+#define BLOCK_SIZE 20000
 
 struct huffmanDictionary huffmanDictionary[256];
 struct huffmanTree *head_huffmanTreeNode;

@@ -26,12 +26,12 @@ int main(int argc, char ** argv){
     return -1;
   }
 
-  //read input file
+  //open files file
   input_file = fopen(argv[1], "rb");
   output_file = fopen(argv[2], "wb");
 
-  //perform bwt
-  //read block_size at a time, stop when there is nothing to read
+  //perform bwt in the while loop
+  //read BLOCK_SIZE at a time, stop when there is nothing to read
   while( length = fread(buffer, 1, BLOCK_SIZE, input_file) ){
     //initialize indices
     for(i = 0; i < length + 1; i++){
@@ -41,10 +41,12 @@ int main(int argc, char ** argv){
     //sort the buffer and store the result as indices in the array
     qsort(indices, length + 1, sizeof(int), ( int (*)(const void *, const void *) )bounded_compare);
 
-
-    //write to output
+    //write to output the length
     unsigned int temp = length + 1;
     fwrite( &temp, 1, sizeof( unsigned int ), output_file );
+
+    //first hold the positon where the first character is 
+    //last stores the index of the end of input buffer
     unsigned int first;
     unsigned int last;
     for (i = 0 ; i <= length ; i++ ) {

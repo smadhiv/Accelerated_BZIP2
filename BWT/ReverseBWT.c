@@ -26,10 +26,11 @@ int main(int argc, char ** argv){
     return -1;
   }
 
-  //read input file
+  //open input file
   input_file = fopen(argv[1], "rb");
   output_file = fopen(argv[2], "wb");
 
+//
   while( fread(&buffer_length, sizeof(unsigned int), 1, input_file) ){
     fread(buffer, sizeof(char), buffer_length, input_file);
     fread(&first, sizeof(unsigned int), 1, input_file);
@@ -52,7 +53,7 @@ int main(int argc, char ** argv){
 
     //get running total
     sum = 0;
-    for(i =0; i < 257; i++){
+    for(i = 0; i < 257; i++){
       RunningTotal[i] = sum;
       sum += frequency[i];
       frequency[i] = 0;
