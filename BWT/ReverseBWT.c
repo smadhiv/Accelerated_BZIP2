@@ -7,13 +7,13 @@
 #include <string.h>
 #include <limits.h>
 
-#define BLOCK_SIZE 200000
+#define BLOCK_SIZE 900000
 
-unsigned char buffer[ BLOCK_SIZE + 1 ];
-unsigned int T[ BLOCK_SIZE + 1 ];
+unsigned char buffer[BLOCK_SIZE + 1];
+unsigned int T[BLOCK_SIZE + 1];
 unsigned int buffer_length;
-unsigned int frequency[ 257 ];
-unsigned int RunningTotal[ 257 ];
+unsigned int frequency[257];
+unsigned int RunningTotal[257];
 
 int main(int argc, char ** argv){
   FILE *input_file, *output_file;
@@ -36,12 +36,12 @@ int main(int argc, char ** argv){
     fread(&first, sizeof(unsigned int), 1, input_file);
     fread(&last, sizeof(unsigned int), 1, input_file);
 
-    //initialize frequency
+    //initialize frequency with zero
     for(i = 0; i < 257; i++){
       frequency[i] = 0;
     }
 
-    //get frequency
+    //get frequency for each symbol
     for(i = 0; i < buffer_length; i++){
       if(i == last){
         frequency[256]++;
@@ -65,9 +65,8 @@ int main(int argc, char ** argv){
         index = last;
       }
       else{
-        index = buffer[i];
-        T[frequency[index] + RunningTotal[index]] = i;
-        frequency[index]++;
+        T[frequency[buffer[i]] + RunningTotal[buffer[i]]] = i;
+        frequency[buffer[i]]++;
       }
     }
 

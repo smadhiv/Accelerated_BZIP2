@@ -10,15 +10,17 @@
 #define BLOCK_SIZE 900000
 
 // linked list to store dictionary
-struct dictionary_linked_list{
+struct linked_list{
 	unsigned char val;
-	struct dictionary_linked_list* next;
-	struct dictionary_linked_list* prev;
+	struct linked_list* next;
+	struct linked_list* prev;
 };
+
+typedef struct linked_list dictionary_linked_list;
 
 //functions supporting reverse MTF
 unsigned char search_index(struct dictionary_linked_list* dictionary, unsigned char characterAtIndex);
-struct dictionary_linked_list* swap_index(struct dictionary_linked_list* dictionary, unsigned char value);
+struct dictionary_linked_list* swap_index(dictionary_linked_list* dictionary, unsigned char value);
 void initialize_linked_list(dictionary_linked_list* head, dictionary_linked_list* tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars);
 
 int main(int argc, char **argv){
@@ -32,7 +34,7 @@ int main(int argc, char **argv){
 	unsigned char inputFileData[BLOCK_SIZE], outputDataIndex[BLOCK_SIZE];
 	FILE *inputFile, *outFile;
 	//structure to hold dictionary data
-	struct dictionary_linked_list *head, *tail;
+	dictionary_linked_list *head, *tail;
 
 	// check parameters
 	if(argc != 3){

@@ -7,7 +7,8 @@
 #include <string.h>
 #include <limits.h>
 
-#define BLOCK_SIZE 200000
+#define BLOCK_SIZE 900000
+
 long length;
 unsigned char buffer[BLOCK_SIZE];
 unsigned int indices[BLOCK_SIZE + 1];
