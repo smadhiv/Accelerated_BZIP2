@@ -17,7 +17,7 @@ unsigned int indices[BLOCK_SIZE + 1];
 int bounded_compare( const unsigned int *i1, const unsigned int *i2 );
 
 //do BWT
-int main(int argc, char ** argv){
+int main(int argc, char **argv){
   int i;
   FILE *input_file, *output_file;
   

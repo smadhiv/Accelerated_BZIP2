@@ -15,17 +15,16 @@ struct linked_list{
 	struct linked_list* next;
 	struct linked_list* prev;
 };
-
 typedef struct linked_list dictionary_linked_list;
 
 //functions supporting MTF
-unsigned char search_value(struct dictionary_linked_list* dictionary, unsigned char characterAtIndex);
-struct dictionary_linked_list* swap_value(struct dictionary_linked_list* dictionary, unsigned char indexToSwap);
 void initialize_dictionary(unsigned char *dictionary, unsigned char *inputFileData, unsigned int inputBlockLength, unsigned char *uniqueChars);
-void initialize_linked_list(dictionary_linked_list* head, dictionary_linked_list* tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars);
+void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars);
+unsigned char search_value(dictionary_linked_list* dictionary, unsigned char characterAtIndex);
+dictionary_linked_list* swap_value(dictionary_linked_list* dictionary, unsigned char indexToSwap);
 
 int main(int argc, char **argv){
-	//measure time
+	//to measure time
 	clock_t start, end;
 	unsigned int cpu_time_used;
 	//dictionary
@@ -36,7 +35,7 @@ int main(int argc, char **argv){
 	unsigned char inputFileData[BLOCK_SIZE], outputDataIndex[BLOCK_SIZE];
 	FILE *inputFile, *outFile;
 	//structure to store each symbols
-	dictionary_linked_list *head, *tail, DictionaryLinkedList[256];
+	dictionary_linked_list *head = NULL, *tail = NULL, DictionaryLinkedList[256];
 
 	//check parameters
 	if(argc != 3){
@@ -52,10 +51,10 @@ int main(int argc, char **argv){
 	outFile = fopen(argv[2], "wb");
 	
 	//read one block at a time, process and write to output
-	while(inputBlockLength = 	fread(inputFileData, sizeof(unsigned char), BLOCK_SIZE, inputFile)){
+	while( (inputBlockLength = fread(inputFileData, sizeof(unsigned char), BLOCK_SIZE, inputFile)) ){
 		//reset dictionary and unique char values
-		memset(dictionary, 255, 255);
 		uniqueChars = 0;
+		memset(dictionary, 255, 255);
 
 		//initialize dictionary
 		//generate dictionary of each symbols i.e set dictionary[n] = n, care when n = 255.
@@ -66,7 +65,7 @@ int main(int argc, char **argv){
 		initialize_dictionary(dictionary, inputFileData, inputBlockLength, &uniqueChars);
 
 		//store dictionary into linked list, can't use arrays because of insert at 0 position
-		initialize_linked_list(head, tail, DictionaryLinkedList, uniqueChars);
+		initialize_linked_list(&head, &tail, DictionaryLinkedList, uniqueChars);
 
 		//generate array list of indeces
 		//for each value in input file, find the location of the value in the dictionary and 
@@ -94,40 +93,6 @@ int main(int argc, char **argv){
 	fclose(inputFile);	
 	fclose(outFile);
   return 0;
-}
-
-// search and return the index
-unsigned char search_value(struct dictionary_linked_list* dictionary, unsigned char characterAtIndex){
-	unsigned int index = 0;
-	while(dictionary->val != characterAtIndex){
-		dictionary = dictionary->next;
-		index++;
-	}
-	return index;
-}
-
-// swap dictionary and returns head
-struct dictionary_linked_list* swap_value(struct dictionary_linked_list* dictionary, unsigned char indexToSwap){
-	unsigned int index = 0;
-	struct dictionary_linked_list* head = dictionary;
-	while(index != indexToSwap){
-		dictionary = dictionary->next;
-		index++;
-	}
-
-	if(dictionary != head){
-		// take care of previous and next node to the current
-		dictionary->prev->next = dictionary->next;
-		if(dictionary->next != NULL){
-			dictionary->next->prev = dictionary->prev;
-		}
-
-		// take care of current
-		dictionary->prev = NULL;
-		dictionary->next = head;
-		head->prev = dictionary;
-	}
-	return dictionary;
 }
 
 //initialize dictionary
@@ -165,20 +130,55 @@ void initialize_dictionary(unsigned char *dictionary, unsigned char *inputFileDa
 }
 
 //store dictionary into linked list, can't use arrays because of insert at 0 position
-void initialize_linked_list(dictionary_linked_list* head, dictionary_linked_list* tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars){
+void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars){
 	unsigned int listCount = 0;
+	dictionary_linked_list *node;
 	dictionary_linked_list *current = &DictionaryLinkedList[0];
-	current->val = dictionary[0];
+	current->val = DictionaryLinkedList[0].val;
 	current->prev = NULL;
-	head = current;
+	*head = current;
 
 	for(unsigned int i = 1; i < uniqueChars; i++){
 		node = &DictionaryLinkedList[++listCount];
-		node->val = dictionary[i];
+		node->val = DictionaryLinkedList[i].val;
 		current->next = node;
 		node->prev = current;
 		current = node;
 	}
 	current->next = NULL;
-	tail = current;
+	*tail = current;
+}
+
+// search and return the index
+unsigned char search_value(dictionary_linked_list* dictionary, unsigned char characterAtIndex){
+	unsigned int index = 0;
+	while(dictionary->val != characterAtIndex){
+		dictionary = dictionary->next;
+		index++;
+	}
+	return index;
+}
+
+// swap dictionary and returns head
+dictionary_linked_list* swap_value(dictionary_linked_list* dictionary, unsigned char indexToSwap){
+	unsigned int index = 0;
+	dictionary_linked_list* head = dictionary;
+	while(index != indexToSwap){
+		dictionary = dictionary->next;
+		index++;
+	}
+
+	if(dictionary != head){
+		// take care of previous and next node to the current
+		dictionary->prev->next = dictionary->next;
+		if(dictionary->next != NULL){
+			dictionary->next->prev = dictionary->prev;
+		}
+
+		// take care of current
+		dictionary->prev = NULL;
+		dictionary->next = head;
+		head->prev = dictionary;
+	}
+	return dictionary;
 }
