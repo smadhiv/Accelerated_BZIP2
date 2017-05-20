@@ -34,3 +34,5 @@
 
 # Folders
 /MultiTableHuffman/bin
+/.vs
+/.vscode
