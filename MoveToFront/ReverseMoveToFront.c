@@ -15,20 +15,20 @@ struct linked_list{
 	struct linked_list* next;
 	struct linked_list* prev;
 };
-
 typedef struct linked_list dictionary_linked_list;
 
 //functions supporting reverse MTF
+void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, unsigned char *dictionary, dictionary_linked_list* DictionaryLinkedList, unsigned int uniqueChars);
 unsigned char search_index(dictionary_linked_list* dictionary, unsigned char characterAtIndex);
 dictionary_linked_list* swap_index(dictionary_linked_list* dictionary, unsigned char value);
-void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars);
 
 int main(int argc, char **argv){
 	//time measurement
 	clock_t start, end;
 	unsigned int cpu_time_used;
 	//dictionary information
-	unsigned char dictionary[256], uniqueChars;
+	unsigned char dictionary[256];
+	unsigned int uniqueChars;
 	//file information
 	unsigned int inputBlockLength;
 	unsigned char inputFileData[BLOCK_SIZE], outputDataIndex[BLOCK_SIZE];
@@ -48,20 +48,15 @@ int main(int argc, char **argv){
 	//read input file, output file
 	inputFile = fopen(argv[1], "rb");
 	outFile = fopen(argv[2], "wb");
-	
-	while( (fread(&uniqueChars, sizeof(unsigned char), 1, inputFile)) ){
+
+	while( (fread(&uniqueChars, sizeof(unsigned int), 1, inputFile)) ){
 		//read the dictionary and block of data
   	fread(&dictionary, sizeof(unsigned char), uniqueChars, inputFile);
 		inputBlockLength = fread(inputFileData, sizeof(unsigned char), BLOCK_SIZE, inputFile);
 
-		// store values into dictionary
-		for(unsigned int i = 0; i < uniqueChars; i++){
-			DictionaryLinkedList[i].val = dictionary[i];
-		}
-
 		//store dictionary into linked list, can't use arrays because of insert at 0 position
-		initialize_linked_list(&head, &tail, DictionaryLinkedList, uniqueChars);
-		
+		initialize_linked_list(&head, &tail, dictionary, DictionaryLinkedList, uniqueChars);
+
 		// generate array list of indeces
 		for(unsigned int i = 0; i < inputBlockLength; i++){
 			outputDataIndex[i] = search_index(head, inputFileData[i]);
@@ -84,23 +79,27 @@ int main(int argc, char **argv){
 }
 
 //store dictionary into linked list, can't use arrays because of insert at 0 position
-void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars){
-	unsigned int listCount = 0;
-	dictionary_linked_list *node;
-	dictionary_linked_list *current = &DictionaryLinkedList[0];
-	current->val = DictionaryLinkedList[0].val;
-	current->prev = NULL;
-	*head = current;
-
-	for(unsigned int i = 1; i < uniqueChars; i++){
-		node = &DictionaryLinkedList[++listCount];
-		node->val = DictionaryLinkedList[i].val;
-		current->next = node;
-		node->prev = current;
-		current = node;
+void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, unsigned char *dictionary, dictionary_linked_list* DictionaryLinkedList, unsigned int uniqueChars){
+	*head = &DictionaryLinkedList[0];
+	DictionaryLinkedList[0].val = dictionary[0];
+	DictionaryLinkedList[0].prev = NULL;
+	if(uniqueChars > 1){
+		DictionaryLinkedList[0].next = &DictionaryLinkedList[1];
 	}
-	current->next = NULL;
-	*tail = current;
+
+	for(unsigned int i = 1; i < uniqueChars - 1; i++){
+		DictionaryLinkedList[i].val = dictionary[i];
+		DictionaryLinkedList[i].prev = &DictionaryLinkedList[i - 1];
+		DictionaryLinkedList[i].next = &DictionaryLinkedList[i + 1];
+	}
+
+	*tail = &DictionaryLinkedList[uniqueChars - 1];
+	DictionaryLinkedList[uniqueChars - 1].val = dictionary[uniqueChars - 1];
+	DictionaryLinkedList[uniqueChars - 1].next = NULL;
+
+	if(uniqueChars > 1){
+	DictionaryLinkedList[uniqueChars - 1].prev = &DictionaryLinkedList[uniqueChars - 2];
+	}
 }
 
 // search and return the index

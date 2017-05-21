@@ -18,8 +18,8 @@ struct linked_list{
 typedef struct linked_list dictionary_linked_list;
 
 //functions supporting MTF
-void initialize_dictionary(unsigned char *dictionary, unsigned char *inputFileData, unsigned int inputBlockLength, unsigned char *uniqueChars);
-void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars);
+void initialize_dictionary(unsigned char *dictionary, unsigned char *inputFileData, unsigned int inputBlockLength, unsigned int *uniqueChars);
+void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, unsigned char *dictionary, dictionary_linked_list* DictionaryLinkedList, unsigned int uniqueChars);
 unsigned char search_value(dictionary_linked_list* dictionary, unsigned char characterAtIndex);
 dictionary_linked_list* swap_value(dictionary_linked_list* dictionary, unsigned char indexToSwap);
 
@@ -30,7 +30,7 @@ int main(int argc, char **argv){
 	//dictionary
 	unsigned char dictionary[256];
 	//file information
-	unsigned char uniqueChars;
+	unsigned int uniqueChars;
 	unsigned int inputBlockLength;
 	unsigned char inputFileData[BLOCK_SIZE], outputDataIndex[BLOCK_SIZE];
 	FILE *inputFile, *outFile;
@@ -65,7 +65,7 @@ int main(int argc, char **argv){
 		initialize_dictionary(dictionary, inputFileData, inputBlockLength, &uniqueChars);
 
 		//store dictionary into linked list, can't use arrays because of insert at 0 position
-		initialize_linked_list(&head, &tail, DictionaryLinkedList, uniqueChars);
+		initialize_linked_list(&head, &tail, dictionary, DictionaryLinkedList, uniqueChars);
 
 		//generate array list of indeces
 		//for each value in input file, find the location of the value in the dictionary and 
@@ -79,7 +79,7 @@ int main(int argc, char **argv){
 		//1. number of unique characters,
 		//2. array of each unique values and 
 		//3. output data which is an array of indeces
-		fwrite(&uniqueChars, sizeof(unsigned char), 1, outFile);
+		fwrite(&uniqueChars, sizeof(unsigned int), 1, outFile);
 		fwrite(dictionary, sizeof(unsigned char), uniqueChars, outFile);
 		fwrite(outputDataIndex, sizeof(unsigned char), inputBlockLength, outFile);
 	}
@@ -96,14 +96,14 @@ int main(int argc, char **argv){
 }
 
 //initialize dictionary
-void initialize_dictionary(unsigned char *dictionary, unsigned char *inputFileData, unsigned int inputBlockLength, unsigned char *uniqueChars){
+void initialize_dictionary(unsigned char *dictionary, unsigned char *inputFileData, unsigned int inputBlockLength, unsigned int *uniqueChars){
 	//generate dictionary of each symbols i.e set dictionary[n] = n, care when n = 255.
 	//take a count of number of distinct characters in input data as uniqueChars
 	//scope for optimization, work if removing the second 'if' statement below
 	for (unsigned int i = 0; i < inputBlockLength; i++){
 		if(dictionary[inputFileData[i]] == 255){
 			dictionary[inputFileData[i]] = inputFileData[i];
-			uniqueChars++;
+			(*uniqueChars)++;
 			if(inputFileData[i] == 255){
 				dictionary[inputFileData[i]] = 0;
 			}
@@ -130,23 +130,27 @@ void initialize_dictionary(unsigned char *dictionary, unsigned char *inputFileDa
 }
 
 //store dictionary into linked list, can't use arrays because of insert at 0 position
-void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, dictionary_linked_list* DictionaryLinkedList, unsigned char uniqueChars){
-	unsigned int listCount = 0;
-	dictionary_linked_list *node;
-	dictionary_linked_list *current = &DictionaryLinkedList[0];
-	current->val = DictionaryLinkedList[0].val;
-	current->prev = NULL;
-	*head = current;
-
-	for(unsigned int i = 1; i < uniqueChars; i++){
-		node = &DictionaryLinkedList[++listCount];
-		node->val = DictionaryLinkedList[i].val;
-		current->next = node;
-		node->prev = current;
-		current = node;
+void initialize_linked_list(dictionary_linked_list** head, dictionary_linked_list** tail, unsigned char *dictionary, dictionary_linked_list* DictionaryLinkedList, unsigned int uniqueChars){
+	*head = &DictionaryLinkedList[0];
+	DictionaryLinkedList[0].val = dictionary[0];
+	DictionaryLinkedList[0].prev = NULL;
+	if(uniqueChars > 1){
+		DictionaryLinkedList[0].next = &DictionaryLinkedList[1];
 	}
-	current->next = NULL;
-	*tail = current;
+
+	for(unsigned int i = 1; i < uniqueChars - 1; i++){
+		DictionaryLinkedList[i].val = dictionary[i];
+		DictionaryLinkedList[i].prev = &DictionaryLinkedList[i - 1];
+		DictionaryLinkedList[i].next = &DictionaryLinkedList[i + 1];
+	}
+
+	*tail = &DictionaryLinkedList[uniqueChars - 1];
+	DictionaryLinkedList[uniqueChars - 1].val = dictionary[uniqueChars - 1];
+	DictionaryLinkedList[uniqueChars - 1].next = NULL;
+
+	if(uniqueChars > 1){
+	DictionaryLinkedList[uniqueChars - 1].prev = &DictionaryLinkedList[uniqueChars - 2];
+	}
 }
 
 // search and return the index
