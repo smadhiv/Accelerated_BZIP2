@@ -52,7 +52,7 @@ int main(int argc, char ** argv){
     }
 
     //get running total
-    sum = 0;
+    unsigned int sum = 0;
     for(i = 0; i < 257; i++){
       RunningTotal[i] = sum;
       sum += frequency[i];
@@ -62,7 +62,6 @@ int main(int argc, char ** argv){
     //get the transformation vector
     for(i = 0; i < buffer_length; i++){
       if(i == last){
-        index = last;
       }
       else{
         T[frequency[buffer[i]] + RunningTotal[buffer[i]]] = i;

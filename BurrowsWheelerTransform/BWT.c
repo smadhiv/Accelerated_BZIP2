@@ -33,7 +33,7 @@ int main(int argc, char **argv){
 
   //perform bwt in the while loop
   //read BLOCK_SIZE at a time, stop when there is nothing to read
-  while( length = fread(buffer, 1, BLOCK_SIZE, input_file) ){
+  while( (length = fread(buffer, 1, BLOCK_SIZE, input_file)) ){
     //initialize indices
     for(i = 0; i < length + 1; i++){
       indices[i] = i;
