@@ -8,75 +8,83 @@
 #include <limits.h>
 
 #define BLOCK_SIZE 900000
-
-long length;
-unsigned char buffer[BLOCK_SIZE];
+//the size  of block read (<= BLOCK_SIZE)
+unsigned int inputBlockLength;
+//store input block data
+unsigned char inputBlockData[BLOCK_SIZE];
+//store indices that correspond to each character in input data
 unsigned int indices[BLOCK_SIZE + 1];
 
 //for the qsort
-int bounded_compare( const unsigned int *i1, const unsigned int *i2 );
+int compar( const unsigned int *i1, const unsigned int *i2 );
 
 //do BWT
 int main(int argc, char **argv){
-  int i;
+  //files for i/o
   FILE *input_file, *output_file;
-  
-  //check for arguments
+  //first and last characters  are written to output to aid BWT
+  unsigned int first;
+  unsigned int last;
+
+  //check for required arguments
   if(argc != 3){
     printf("Error: Need input and output file names\n");
     return -1;
   }
 
-  //open files file
+  //open i/o file
   input_file = fopen(argv[1], "rb");
   output_file = fopen(argv[2], "wb");
 
-  //perform bwt in the while loop
+  //perform BWT in the while loop
   //read BLOCK_SIZE at a time, stop when there is nothing to read
-  while( (length = fread(buffer, 1, BLOCK_SIZE, input_file)) ){
-    //initialize indices
-    for(i = 0; i < length + 1; i++){
+  while( (inputBlockLength = fread(inputBlockData, 1, BLOCK_SIZE, input_file)) ){
+    //initialize indices. Since we are going to sort the input block in increasing order, 
+    //the indeces are initialized with values (0 - buffer length - 1), these numbers 
+    //correspond to the input characters
+    //remember we need the last character and not the first
+    for(unsigned int i = 0; i < inputBlockLength + 1; i++){
       indices[i] = i;
     }
 
     //sort the buffer and store the result as indices in the array
-    qsort(indices, length + 1, sizeof(int), ( int (*)(const void *, const void *) )bounded_compare);
+    qsort(indices, inputBlockLength + 1, sizeof(int), ( int (*)(const void *, const void *) )compar);
 
     //write to output the length
-    unsigned int temp = length + 1;
-    fwrite( &temp, 1, sizeof( unsigned int ), output_file );
+    unsigned int temp = inputBlockLength + 1;
+    fwrite(&temp, 1, sizeof( unsigned int ), output_file);
 
     //first hold the positon where the first character is 
     //last stores the index of the end of input buffer
-    unsigned int first;
-    unsigned int last;
-    for (i = 0 ; i <= length ; i++ ) {
-      if ( indices[ i ] == 1 ){
-        first = i;
+    for (unsigned int i = 0 ; i <= inputBlockLength ; i++){
+      if(indices[ i ] != 0){
+        fputc(inputBlockData[ indices[ i ] - 1 ], output_file);
+        if(indices[i] == 1){
+          //capture first, the first element is present at the end of the string that starts with the index 1
+          first = i;
+        }
       }
-
-      if ( indices[ i ] == 0 ) {
+      else{
+        //capture last, the last element is present at the end of the string that starts with the zero index
         last = i;
         fputc('?', output_file);
-      } 
-      else{
-        fputc(buffer[ indices[ i ] - 1 ], output_file);
       }
     }
-    fwrite( &first, 1, sizeof( unsigned int ), output_file );   
-    fwrite( &last, 1, sizeof( unsigned int ), output_file );
+    fwrite(&first, 1, sizeof(unsigned int), output_file);   
+    fwrite(&last, 1, sizeof(unsigned int), output_file);
   }
 
   return 0;
 }
 
-//for the qsort
-int bounded_compare( const unsigned int *i1, const unsigned int *i2 ){
-  unsigned int l1 = (unsigned int) ( length - *i1 );
-  unsigned int l2 = (unsigned int) ( length - *i2 );
+//for the qsort, we do memcmp to compare each mem location, if all same, then which ever comes earlier is the lesser
+//we do not wrap around the string to make compare
+int compar(const unsigned int *i1, const unsigned int *i2){
+  unsigned int l1 = (unsigned int) (inputBlockLength - *i1);
+  unsigned int l2 = (unsigned int) (inputBlockLength - *i2);
 
-  int result = memcmp( buffer + *i1, buffer + *i2, l1 < l2 ? l1 : l2 );
-  if ( result == 0 ){
+  int result = memcmp(inputBlockData + *i1, inputBlockData + *i2, l1 < l2 ? l1 : l2);
+  if (result == 0){
     return l2 - l1;
   }
   else{
