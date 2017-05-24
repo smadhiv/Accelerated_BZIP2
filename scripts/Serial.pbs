@@ -21,7 +21,6 @@ rm TestFiles/mb64.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb64 >> logs/Serial_compress.txt
 rm TestFiles/mb64.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb64 >> logs/Serial_compress.txt
-rm TestFiles/mb64.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 128MB' >> logs/Serial_compress.txt
@@ -34,7 +33,6 @@ rm TestFiles/mb128.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb128 >> logs/Serial_compress.txt
 rm TestFiles/mb128.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb128 >> logs/Serial_compress.txt
-rm TestFiles/mb128.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 256MB' >> logs/Serial_compress.txt
@@ -47,7 +45,6 @@ rm TestFiles/mb256.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb256 >> logs/Serial_compress.txt
 rm TestFiles/mb256.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb256 >> logs/Serial_compress.txt
-rm TestFiles/mb256.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 512MB' >> logs/Serial_compress.txt
@@ -60,7 +57,6 @@ rm TestFiles/mb512.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb512 >> logs/Serial_compress.txt
 rm TestFiles/mb512.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb512 >> logs/Serial_compress.txt
-rm TestFiles/mb512.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 768MB' >> logs/Serial_compress.txt
@@ -73,7 +69,6 @@ rm TestFiles/mb768.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb768 >> logs/Serial_compress.txt
 rm TestFiles/mb768.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb768 >> logs/Serial_compress.txt
-rm TestFiles/mb768.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 1024MB' >> logs/Serial_compress.txt
@@ -86,7 +81,6 @@ rm TestFiles/mb1024.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1024 >> logs/Serial_compress.txt
 rm TestFiles/mb1024.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1024 >> logs/Serial_compress.txt
-rm TestFiles/mb1024.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 1280MB' >> logs/Serial_compress.txt
@@ -99,7 +93,6 @@ rm TestFiles/mb1280.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1280 >> logs/Serial_compress.txt
 rm TestFiles/mb1280.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1280 >> logs/Serial_compress.txt
-rm TestFiles/mb1280.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 1536MB' >> logs/Serial_compress.txt
@@ -112,7 +105,6 @@ rm TestFiles/mb1536.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1536 >> logs/Serial_compress.txt
 rm TestFiles/mb1536.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1536 >> logs/Serial_compress.txt
-rm TestFiles/mb1536.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 1792MB' >> logs/Serial_compress.txt
@@ -125,7 +117,6 @@ rm TestFiles/mb1792.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1792 >> logs/Serial_compress.txt
 rm TestFiles/mb1792.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb1792 >> logs/Serial_compress.txt
-rm TestFiles/mb1792.bz2
 
 echo ' ' >> logs/Serial_compress.txt
 echo 'FileSize: 2048MB' >> logs/Serial_compress.txt
@@ -138,6 +129,5 @@ rm TestFiles/mb2048.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb2048 >> logs/Serial_compress.txt
 rm TestFiles/mb2048.bz2
 /usr/bin/time -f "%E" bzip2 -k TestFiles/mb2048 >> logs/Serial_compress.txt
-rm TestFiles/mb2048.bz2
 
 
