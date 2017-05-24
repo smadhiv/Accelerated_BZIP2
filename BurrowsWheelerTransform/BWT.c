@@ -1,6 +1,7 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //Sriram Madhivanan
 //BWT Implementation
+//convert putc to fwrite
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,7 @@ unsigned char inputBlockData[BLOCK_SIZE];
 unsigned int indices[BLOCK_SIZE + 1];
 
 //for the qsort
-int compar( const unsigned int *i1, const unsigned int *i2 );
+int compar( const unsigned int *index1, const unsigned int *index2 );
 
 //do BWT
 int main(int argc, char **argv){
@@ -56,6 +57,7 @@ int main(int argc, char **argv){
 
     //first hold the positon where the first character is 
     //last stores the index of the end of input buffer
+    //write each character to file 
     for (unsigned int i = 0 ; i <= inputBlockLength ; i++){
       if(indices[ i ] != 0){
         fputc(inputBlockData[ indices[ i ] - 1 ], output_file);
@@ -74,18 +76,21 @@ int main(int argc, char **argv){
     fwrite(&last, 1, sizeof(unsigned int), output_file);
   }
 
+  //close i/o files
+  fclose(input_file);
+  fclose(output_file);
   return 0;
 }
 
 //for the qsort, we do memcmp to compare each mem location, if all same, then which ever comes earlier is the lesser
 //we do not wrap around the string to make compare
-int compar(const unsigned int *i1, const unsigned int *i2){
-  unsigned int l1 = (unsigned int) (inputBlockLength - *i1);
-  unsigned int l2 = (unsigned int) (inputBlockLength - *i2);
+int compar(const unsigned int *index1, const unsigned int *index2){
+  unsigned int length1 = (unsigned int) (inputBlockLength - *index1);
+  unsigned int length2 = (unsigned int) (inputBlockLength - *index2);
 
-  int result = memcmp(inputBlockData + *i1, inputBlockData + *i2, l1 < l2 ? l1 : l2);
+  int result = memcmp(inputBlockData + *index1, inputBlockData + *index2, length1 < length2 ? length1 : length2);
   if (result == 0){
-    return l2 - l1;
+    return length2 - length1;
   }
   else{
     return result;

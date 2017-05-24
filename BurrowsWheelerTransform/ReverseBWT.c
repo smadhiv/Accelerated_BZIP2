@@ -1,6 +1,7 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //Sriram Madhivanan
 //reverse BWT Implementation
+//convert putc to fwrite
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,16 +10,18 @@
 
 #define BLOCK_SIZE 900000
 
-unsigned char buffer[BLOCK_SIZE + 1];
+unsigned char inputBlockData[BLOCK_SIZE + 1];
 unsigned int T[BLOCK_SIZE + 1];
-unsigned int buffer_length;
+unsigned int inputBlockLength;
 unsigned int frequency[257];
 unsigned int RunningTotal[257];
 
 int main(int argc, char ** argv){
+  //files for i/o
   FILE *input_file, *output_file;
-  unsigned int first, last;
-  unsigned int i, j;
+  //first and last characters  are written to output to aid BWT
+  unsigned int first;
+  unsigned int last;
 
   //check for arguments
   if(argc != 3){
@@ -26,56 +29,60 @@ int main(int argc, char ** argv){
     return -1;
   }
 
-  //open input file
+  //open i/o files
   input_file = fopen(argv[1], "rb");
   output_file = fopen(argv[2], "wb");
 
-//
-  while( fread(&buffer_length, sizeof(unsigned int), 1, input_file) ){
-    fread(buffer, sizeof(char), buffer_length, input_file);
+  //reverse BWT in loop for each block in input file
+  while( fread(&inputBlockLength, sizeof(unsigned int), 1, input_file) ){
+    fread(inputBlockData, sizeof(unsigned char), inputBlockLength, input_file);
     fread(&first, sizeof(unsigned int), 1, input_file);
     fread(&last, sizeof(unsigned int), 1, input_file);
 
-    //initialize frequency with zero
-    for(i = 0; i < 257; i++){
+    //initialize frequency with zeros
+    for(unsigned int i = 0; i < 257; i++){
       frequency[i] = 0;
     }
 
-    //get frequency for each symbol
-    for(i = 0; i < buffer_length; i++){
+    //get frequency for each symbol in the input block
+    for(unsigned int i = 0; i < inputBlockLength; i++){
+      //we ignore the end of file indicator symbol at postion last
       if(i == last){
         frequency[256]++;
       }
       else{
-        frequency[buffer[i]]++;
+        frequency[inputBlockData[i]]++;
       }
     }
 
     //get running total
     unsigned int sum = 0;
-    for(i = 0; i < 257; i++){
+    for(unsigned int i = 0; i < 257; i++){
       RunningTotal[i] = sum;
       sum += frequency[i];
       frequency[i] = 0;
     }
 
     //get the transformation vector
-    for(i = 0; i < buffer_length; i++){
+    //For a given row i, transformation vector[ i ] is defined as the row where string[ i + 1 ] is found
+    for(unsigned int i = 0; i < inputBlockLength; i++){
       if(i == last){
       }
       else{
-        T[frequency[buffer[i]] + RunningTotal[buffer[i]]] = i;
-        frequency[buffer[i]]++;
+        T[frequency[inputBlockData[i]] + RunningTotal[inputBlockData[i]]] = i;
+        frequency[inputBlockData[i]]++;
       }
     }
 
     //get the output
-    i = first;
-    for ( j = 0 ; j < buffer_length - 1; j++ ) {
-      putc( buffer[ i ], output_file);
-      i = T[ i ];
+    unsigned int i = first;
+    for (unsigned int j = 0 ; j < inputBlockLength - 1; j++) {
+      putc( inputBlockData[i], output_file);
+      i = T[i];
     }
   }
+
+  //close i/o files
   fclose(input_file);
   fclose(output_file);
   return 0;
