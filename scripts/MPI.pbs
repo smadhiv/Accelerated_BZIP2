@@ -8,7 +8,7 @@ module add gcc/4.8.1 openmpi/1.10.3
 cd /home/smadhiv/Project/Compression/Accelerated_BZIP2
 
 echo "Run: MPI" > logs/MPI.txt
-echo "Resource: select=32:ncpus=2:mpiprocs=1:mem=124gb:phase=10") 2>> logs/MPI.txt
+echo "Resource: select=32:ncpus=2:mpiprocs=1:mem=124gb:phase=10" >> logs/MPI.txt
 
 echo ' ' >> logs/MPI.txt
 echo 'FileSize: 64MB' >> logs/MPI.txt
