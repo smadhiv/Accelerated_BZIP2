@@ -8,7 +8,7 @@
 #include<time.h>
 #include "../include/serialHeader.h"
 
-#define BLOCK_SIZE 20000
+#define BLOCK_SIZE 900000
 
 struct huffmanDictionary huffmanDictionary[256];
 struct huffmanTree *head_huffmanTreeNode;
