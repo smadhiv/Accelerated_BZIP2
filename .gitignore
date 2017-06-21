@@ -36,6 +36,7 @@
 *.su
 
 # Folders
-/MultiTableHuffman/bin
+/MultiTableHuffman/Old
+/Backup
 /.vs
 /.vscode

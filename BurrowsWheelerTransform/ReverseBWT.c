@@ -3,25 +3,19 @@
 //reverse BWT Implementation
 //convert putc to fwrite
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+#define BLOCK_SIZE 900000
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-
-#define BLOCK_SIZE 900000
-
-unsigned char inputBlockData[BLOCK_SIZE + 1];
-unsigned int T[BLOCK_SIZE + 1];
-unsigned int inputBlockLength;
-unsigned int frequency[257];
-unsigned int RunningTotal[257];
+#include "header/ubwt.h"
 
 int main(int argc, char ** argv){
   //files for i/o
   FILE *input_file, *output_file;
   //first and last characters  are written to output to aid BWT
-  unsigned int first;
-  unsigned int last;
+  unsigned char inputBlockData[BLOCK_SIZE + 9];
+  unsigned char outputBlockData[BLOCK_SIZE];
+  unsigned int inputBlockLength;
 
   //check for arguments
   if(argc != 3){
@@ -34,52 +28,9 @@ int main(int argc, char ** argv){
   output_file = fopen(argv[2], "wb");
 
   //reverse BWT in loop for each block in input file
-  while( fread(&inputBlockLength, sizeof(unsigned int), 1, input_file) ){
-    fread(inputBlockData, sizeof(unsigned char), inputBlockLength, input_file);
-    fread(&first, sizeof(unsigned int), 1, input_file);
-    fread(&last, sizeof(unsigned int), 1, input_file);
-
-    //initialize frequency with zeros
-    for(unsigned int i = 0; i < 257; i++){
-      frequency[i] = 0;
-    }
-
-    //get frequency for each symbol in the input block
-    for(unsigned int i = 0; i < inputBlockLength; i++){
-      //we ignore the end of file indicator symbol at postion last
-      if(i == last){
-        frequency[256]++;
-      }
-      else{
-        frequency[inputBlockData[i]]++;
-      }
-    }
-
-    //get running total
-    unsigned int sum = 0;
-    for(unsigned int i = 0; i < 257; i++){
-      RunningTotal[i] = sum;
-      sum += frequency[i];
-      frequency[i] = 0;
-    }
-
-    //get the transformation vector
-    //For a given row i, transformation vector[ i ] is defined as the row where string[ i + 1 ] is found
-    for(unsigned int i = 0; i < inputBlockLength; i++){
-      if(i == last){
-      }
-      else{
-        T[frequency[inputBlockData[i]] + RunningTotal[inputBlockData[i]]] = i;
-        frequency[inputBlockData[i]]++;
-      }
-    }
-
-    //get the output
-    unsigned int i = first;
-    for (unsigned int j = 0 ; j < inputBlockLength - 1; j++) {
-      putc( inputBlockData[i], output_file);
-      i = T[i];
-    }
+  while( (inputBlockLength = fread(inputBlockData, sizeof(unsigned char), BLOCK_SIZE + 9, input_file)) ){
+    reverse_burrows_wheeler_transform(inputBlockLength, inputBlockData, outputBlockData);
+    fwrite(outputBlockData, sizeof(unsigned char), inputBlockLength - 9, output_file);
   }
 
   //close i/o files
