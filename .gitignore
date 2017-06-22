@@ -36,9 +36,9 @@
 *.su
 
 # Folders
-/MultiTableHuffman/Old
 /TestFiles
 /Backup
 /Old
+/scripts
 /.vs
 /.vscode
