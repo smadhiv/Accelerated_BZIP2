@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "header/umtf.h"
+#include "../Headers/umtf.h"
 
 int main(int argc, char **argv){
 	//time measurement

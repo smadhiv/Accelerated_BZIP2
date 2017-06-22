@@ -6,7 +6,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "header/huffman.h"
+#include "../Headers/huffman.h"
 #define BLOCK_SIZE 900000
 
 int main(int argc, char **argv){

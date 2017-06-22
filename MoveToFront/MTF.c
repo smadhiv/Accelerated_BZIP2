@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "header/mtf.h"
+#include "../Headers/mtf.h"
 
 int main(int argc, char **argv){
 	//to measure time

@@ -7,9 +7,9 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "header/huffman.h"
-#include "header/ubwt.h"
-#include "header/umtf.h"
+#include "../Headers/huffman.h"
+#include "../Headers/ubwt.h"
+#include "../Headers/umtf.h"
 
 int main(int argc, char **argv){
 	//time measurement
@@ -44,12 +44,17 @@ int main(int argc, char **argv){
 	while( (fread(&compressedBlockLenth, sizeof(unsigned int), 1, inputFile)) ){
 		fread(&inputBlockLength, sizeof(unsigned int), 1, inputFile);
 		fread(frequency, sizeof(unsigned int), 256, inputFile);
-    fread(inputBlockData, sizeof(unsigned char), inputBlockLength, inputFile);
-		reverse_huffman_encoding(frequency, inputBlockLength, inputBlockData, huffmanOutputData);
+    fread(inputBlockData, sizeof(unsigned char), compressedBlockLenth, inputFile);
+
+		//perform huffman
+		reverse_huffman_encoding(frequency, compressedBlockLenth, inputBlockData, huffmanOutputData);
+
 		//perform reverse MTF
 		reverse_move_to_front(inputBlockLength, &head, &tail, dictionaryLinkedList, huffmanOutputData, mtfOutputData);
+		
 		//perform reverse BWT
     reverse_burrows_wheeler_transform(inputBlockLength, mtfOutputData, bwtOutputData);
+		
 		fwrite(bwtOutputData, sizeof(unsigned char), inputBlockLength - 9, outFile);
 	}
 	

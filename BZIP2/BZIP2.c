@@ -7,9 +7,9 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "header/huffman.h"
-#include "header/bwt.h"
-#include "header/mtf.h"
+#include "../Headers/huffman.h"
+#include "../Headers/bwt.h"
+#include "../Headers/mtf.h"
 
 int main(int argc, char **argv){
   //time measurement
