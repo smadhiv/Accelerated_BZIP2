@@ -93,7 +93,7 @@ int main(int argc, char **argv){
     move_to_front(newInputBlockLength, &head, &tail, dictionaryLinkedList, bwtOutputData, mtfOutputData);
     //perform huffman
     unsigned int compressedBlockLength = huffman_encoding(frequency, newInputBlockLength, mtfOutputData, huffmanOutputData);
-		printf("compressed block length = %u\n", compressedBlockLength);
+
 	  //write to output
 	  memcpy(&mpiCompressedData[mpiCompressedBlockLength], &compressedBlockLength, 4);
 	  memcpy(&mpiCompressedData[mpiCompressedBlockLength + 4], &newInputBlockLength, 4);
