@@ -23,14 +23,15 @@ int main(int argc, char **argv){
 	unsigned char huffmanOutputData[BLOCK_SIZE];
   unsigned char mtfOutputData[BLOCK_SIZE];
 	unsigned char bwtOutputData[BLOCK_SIZE - 9];
-	FILE *compressedFile;
-	unsigned int compressedFileLength, outputFileLength;
+	unsigned int outputFileLength;
 
 	//structure to hold dictionary data
 	linked_list *head = NULL, *tail = NULL, dictionaryLinkedList[256];
 
 	//mpi data
-	unsigned int rank, numProcesses, numCompressedBlocks, mpiCompressedBlockLength, mpiOutputBlockLength;
+	unsigned int rank, numProcesses;
+	unsigned int numCompressedBlocks;
+	unsigned int mpiCompressedBlockLength, mpiOutputBlockLength;
 	unsigned int *mpiCompressedBlockIndex;
 	unsigned char *mpiOutputData, *mpiCompressedData;
 	
@@ -47,6 +48,8 @@ int main(int argc, char **argv){
 
 	
 	if(rank == 0){
+		FILE *compressedFile;
+		unsigned int compressedFileLength;
 		compressedFile = fopen(argv[1], "rb");
 		fseek(compressedFile, 0, SEEK_END);
 		compressedFileLength = ftell(compressedFile);
@@ -70,11 +73,16 @@ int main(int argc, char **argv){
 	// calculate size of block
 	mpiCompressedBlockLength = mpiCompressedBlockIndex[rank + 1] - mpiCompressedBlockIndex[rank];
 	
+	//get output block length
+	mpiOutputBlockLength = outputFileLength / numProcesses;
+	if(rank == (numProcesses - 1)){
+		mpiOutputBlockLength = outputFileLength - ((numProcesses - 1) * mpiOutputBlockLength);
+	}
+
 	//allocate data
 	mpiCompressedData = (unsigned char *)malloc((mpiCompressedBlockLength) * sizeof(unsigned char));
-	unsigned int outputLength = outputFileLength -  (numProcesses - 1) * (outputFileLength / numProcesses);
-	mpiOutputData = (unsigned char *)malloc(outputLength * sizeof(unsigned char));
-	
+	mpiOutputData = (unsigned char *)malloc(mpiOutputBlockLength * sizeof(unsigned char));
+
 	MPI_File_open(MPI_COMM_WORLD, argv[1], MPI_MODE_RDONLY, MPI_INFO_NULL, &mpiCompressedFile);
 	MPI_File_seek(mpiCompressedFile, mpiCompressedBlockIndex[rank], MPI_SEEK_SET);
 	MPI_File_read(mpiCompressedFile, mpiCompressedData, mpiCompressedBlockLength, MPI_UNSIGNED_CHAR, &status);
@@ -101,8 +109,10 @@ int main(int argc, char **argv){
 		
 		//write to output
 		memcpy(&mpiOutputData[mpiOutputBlockLength], bwtOutputData, inputBlockLength - 9);
-		mpiOutputBlockLength += inputBlockLength - 9;
-		}
+		mpiOutputBlockLength += (inputBlockLength - 9);
+		inputBlockPointer += (1032 + compressedBlockLenth);
+		blockLength -= (1032 + compressedBlockLenth);
+	}
 
 	// get time
 	if(rank == 0){

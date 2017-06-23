@@ -17,9 +17,6 @@ int main(int argc, char **argv){
 	clock_t start, end;
 	unsigned int cpuTimeUsed;
 
-  //input file length that will be bcasted from root process
-	unsigned int inputFileLength;
-
   //structure to store each symbols
 	linked_list *head = NULL, *tail = NULL, dictionaryLinkedList[256];
   unsigned char bwtOutputData[BLOCK_SIZE + 9];
@@ -28,10 +25,14 @@ int main(int argc, char **argv){
   unsigned int frequency[256];
 
 	//for mpi
-	unsigned int rank, numProcesses, mpiInputBlockLength, mpiCompressedBlockLength;
+	unsigned int rank, numProcesses;
+	unsigned int mpiInputBlockLength, mpiCompressedBlockLength;
 	unsigned int *mpiCompressedBlockIndex;
 	unsigned char *mpiInputData, *mpiCompressedData;
+  //input file length that will be bcasted from root process
+	unsigned int inputFileLength;
 
+	//initialize mpi
 	MPI_Init( &argc, &argv);
 	MPI_File mpiInputFile, mpiCompressedFile;
 	MPI_Status status;
@@ -61,12 +62,12 @@ int main(int argc, char **argv){
 
 	//allocate memory 
 	mpiInputData = (unsigned char *)malloc(mpiInputBlockLength * sizeof(unsigned char));
-	mpiCompressedData = (unsigned char *)malloc(mpiInputBlockLength * 2 * sizeof(unsigned char));	
+	mpiCompressedData = (unsigned char *)malloc((mpiInputBlockLength * 2 + 1024) * sizeof(unsigned char));
 	mpiCompressedBlockIndex = (unsigned int *)malloc(numProcesses * sizeof(unsigned int));
 
 	// open file in each process and read data
 	MPI_File_open(MPI_COMM_WORLD, argv[1], MPI_MODE_RDONLY, MPI_INFO_NULL, &mpiInputFile);
-	MPI_File_seek(mpiInputFile, rank * mpiInputBlockLength, MPI_SEEK_SET);
+	MPI_File_seek(mpiInputFile, rank * (inputFileLength / numProcesses), MPI_SEEK_SET);
 	MPI_File_read(mpiInputFile, mpiInputData, mpiInputBlockLength, MPI_UNSIGNED_CHAR, &status);
 
 	// start clock
@@ -84,7 +85,7 @@ int main(int argc, char **argv){
 
 	  //copy input data to global memory
 	  memcpy(inputBlockData, inputBlockPointer, inputBlockLength);
-		inputBlockPointer += BLOCK_SIZE;
+		inputBlockPointer += inputBlockLength;
 	  //perform BWT
     burrows_wheeler_transform(bwtOutputData);
     unsigned int newInputBlockLength = inputBlockLength + 9;
@@ -92,7 +93,7 @@ int main(int argc, char **argv){
     move_to_front(newInputBlockLength, &head, &tail, dictionaryLinkedList, bwtOutputData, mtfOutputData);
     //perform huffman
     unsigned int compressedBlockLength = huffman_encoding(frequency, newInputBlockLength, mtfOutputData, huffmanOutputData);
-
+		printf("compressed block length = %u\n", compressedBlockLength);
 	  //write to output
 	  memcpy(&mpiCompressedData[mpiCompressedBlockLength], &compressedBlockLength, 4);
 	  memcpy(&mpiCompressedData[mpiCompressedBlockLength + 4], &newInputBlockLength, 4);
@@ -100,7 +101,6 @@ int main(int argc, char **argv){
 	  memcpy(&mpiCompressedData[mpiCompressedBlockLength + 1032], huffmanOutputData, compressedBlockLength);
 	  mpiCompressedBlockLength += compressedBlockLength + 1032;
   }
-
 	// calculate length of compressed data
 	mpiCompressedBlockIndex[rank] = mpiCompressedBlockLength;
 
