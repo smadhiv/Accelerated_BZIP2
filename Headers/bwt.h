@@ -20,8 +20,8 @@ void serialize_int(unsigned char *outputBlockData, unsigned int value, unsigned 
 void burrows_wheeler_transform(unsigned char *outputBlockData){
   //first and last characters  are written to output to aid BWT
   //store indices that correspond to each character in input data
-  unsigned int first;
-  unsigned int last;
+  unsigned int first = 0;
+  unsigned int last = 0;
   unsigned int indices[BLOCK_SIZE + 1];
 
   //initialize indices. Since we are going to sort the input block in increasing order, 

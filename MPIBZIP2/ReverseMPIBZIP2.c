@@ -8,7 +8,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "../Headers/huffman.h"
+#include "../Headers/huffman_serial.h"
 #include "../Headers/ubwt.h"
 #include "../Headers/umtf.h"
 
@@ -40,23 +40,28 @@ int main(int argc, char **argv){
 	MPI_Status status;
 	
 	// get rank and number of processes value
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
+	MPI_Comm_rank(MPI_COMM_WORLD, (int *)&rank);
+	MPI_Comm_size(MPI_COMM_WORLD, (int *)&numProcesses);
 
 	// find length of compressedFile file
 	mpiCompressedBlockIndex = (unsigned int *)malloc((numProcesses + 1) * sizeof(unsigned int));
 
 	
 	if(rank == 0){
+		unsigned int ret;
 		FILE *compressedFile;
 		unsigned int compressedFileLength;
 		compressedFile = fopen(argv[1], "rb");
 		fseek(compressedFile, 0, SEEK_END);
 		compressedFileLength = ftell(compressedFile);
 		fseek(compressedFile, 0, SEEK_SET);
-		fread(&outputFileLength, sizeof(unsigned int), 1, compressedFile);
-		fread(&numCompressedBlocks, sizeof(unsigned int), 1, compressedFile);
-		fread(mpiCompressedBlockIndex, sizeof(unsigned int), numCompressedBlocks, compressedFile);
+		ret = fread(&outputFileLength, sizeof(unsigned int), 1, compressedFile);
+		ret += fread(&numCompressedBlocks, sizeof(unsigned int), 1, compressedFile);
+		ret += fread(mpiCompressedBlockIndex, sizeof(unsigned int), numCompressedBlocks, compressedFile);
+		if(ret != 2 + numCompressedBlocks){
+			printf("Error: Fread failed\n");
+			return -1;
+		}
 		mpiCompressedBlockIndex[numCompressedBlocks] = compressedFileLength;
 		fclose(compressedFile);
 	}

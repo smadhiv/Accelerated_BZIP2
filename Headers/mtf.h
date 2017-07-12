@@ -1,19 +1,25 @@
-/*******************************************************************************************/
+/******************************************************************************************************/
 //linked list to store dictionary
 typedef struct linked_list{
 	unsigned char val;
 	struct linked_list* next;
 	struct linked_list* prev;
 } linked_list;
+/******************************************************************************************************/
 
-//functions supporting MTF
+/******************************************************************************************************/
+//MTF
 void move_to_front(unsigned int inputBlockLength, linked_list** head, linked_list** tail, linked_list* dictionaryLinkedList, unsigned char *inputFileData, unsigned char *outputDataIndex);
+/******************************************************************************************************/
+
+/******************************************************************************************************/
+//helper functions
 void initialize_linked_list(linked_list** head, linked_list** tail, linked_list* dictionaryLinkedList);
 unsigned char search_value(linked_list* dictionary, unsigned char characterAtIndex);
 linked_list* swap_value(linked_list* dictionary, unsigned char indexToSwap);
-/*******************************************************************************************/
+/******************************************************************************************************/
 
-/*******************************************************************************************/
+/******************************************************************************************************/
 void move_to_front(unsigned int inputBlockLength, linked_list** head, linked_list** tail, linked_list* dictionaryLinkedList, unsigned char *inputFileData, unsigned char *outputDataIndex){
   //store dictionary into linked list, can't use arrays because of insert at 0 position
   initialize_linked_list(head, tail, dictionaryLinkedList);
@@ -25,9 +31,9 @@ void move_to_front(unsigned int inputBlockLength, linked_list** head, linked_lis
 	  *head = swap_value(*head, outputDataIndex[i]);
   }
 }
-/*******************************************************************************************/
+/******************************************************************************************************/
 
-/*******************************************************************************************/
+/******************************************************************************************************/
 //store dictionary into linked list, can't use arrays because of insert at 0 position
 void initialize_linked_list(linked_list** head, linked_list** tail, linked_list* dictionaryLinkedList){
 	*head = &dictionaryLinkedList[0];
@@ -47,9 +53,9 @@ void initialize_linked_list(linked_list** head, linked_list** tail, linked_list*
 		dictionaryLinkedList[i].next = &dictionaryLinkedList[i + 1];
 	}
 }
-/*******************************************************************************************/
+/******************************************************************************************************/
 
-/*******************************************************************************************/
+/******************************************************************************************************/
 // search and return the index
 unsigned char search_value(linked_list* dictionary, unsigned char characterAtIndex){
 	unsigned int index = 0;
@@ -59,9 +65,9 @@ unsigned char search_value(linked_list* dictionary, unsigned char characterAtInd
 	}
 	return index;
 }
-/*******************************************************************************************/
+/******************************************************************************************************/
 
-/*******************************************************************************************/
+/******************************************************************************************************/
 // swap dictionary and returns head
 linked_list* swap_value(linked_list* dictionary, unsigned char indexToSwap){
 	unsigned int index = 0;
@@ -85,4 +91,4 @@ linked_list* swap_value(linked_list* dictionary, unsigned char indexToSwap){
 	}
 	return dictionary;
 }
-/*******************************************************************************************/
+/******************************************************************************************************/

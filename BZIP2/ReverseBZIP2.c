@@ -7,7 +7,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "../Headers/huffman.h"
+#include "../Headers/huffman_serial.h"
 #include "../Headers/ubwt.h"
 #include "../Headers/umtf.h"
 
@@ -18,12 +18,12 @@ int main(int argc, char **argv){
 
 	//file information
 	unsigned int compressedBlockLenth, inputBlockLength;
-	unsigned int frequency[256];
 	unsigned char inputBlockData[2 * BLOCK_SIZE];
 	unsigned char huffmanOutputData[BLOCK_SIZE];
   unsigned char mtfOutputData[BLOCK_SIZE];
 	unsigned char bwtOutputData[BLOCK_SIZE - 9];
-	
+	unsigned int frequency[256];
+	//files for i/o
 	FILE *inputFile, *outFile;
 	//structure to hold dictionary data
 	linked_list *head = NULL, *tail = NULL, dictionaryLinkedList[256];
@@ -41,10 +41,11 @@ int main(int argc, char **argv){
 	// start time measure
 	start = clock();
 
-	while( (fread(&compressedBlockLenth, sizeof(unsigned int), 1, inputFile)) ){
-		fread(&inputBlockLength, sizeof(unsigned int), 1, inputFile);
-		fread(frequency, sizeof(unsigned int), 256, inputFile);
-    fread(inputBlockData, sizeof(unsigned char), compressedBlockLenth, inputFile);
+	unsigned int ret;
+	while( (ret = fread(&compressedBlockLenth, sizeof(unsigned int), 1, inputFile)) ){
+		ret = fread(&inputBlockLength, sizeof(unsigned int), 1, inputFile);
+		ret = fread(frequency, sizeof(unsigned int), 256, inputFile);
+    ret = fread(inputBlockData, sizeof(unsigned char), compressedBlockLenth, inputFile);
 
 		//perform huffman
 		reverse_huffman_encoding(frequency, compressedBlockLenth, inputBlockData, huffmanOutputData);

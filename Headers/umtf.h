@@ -11,6 +11,10 @@ typedef struct linked_list{
 /***************************************************************************************************************/
 //functions supporting reverse MTF
 void reverse_move_to_front(unsigned int inputBlockLength, linked_list** head, linked_list** tail, linked_list* dictionaryLinkedList, unsigned char *inputFileData, unsigned char *outputDataIndex);
+/***************************************************************************************************************/
+
+/***************************************************************************************************************/
+//helper functions
 void initialize_linked_list(linked_list** head, linked_list** tail, linked_list* dictionaryLinkedList);
 unsigned char search_index(linked_list* dictionary, unsigned char characterAtIndex);
 linked_list* swap_index(linked_list* dictionary, unsigned char value);

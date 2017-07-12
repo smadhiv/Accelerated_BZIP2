@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "../Headers/ubwt.h"
+#include "../../Headers/ubwt.h"
 
 int main(int argc, char ** argv){
   //files for i/o

@@ -15,23 +15,55 @@ struct huffmanTree
 	struct huffmanTree *left, *right;
 };
 
-struct huffmanDictionary huffmanDictionary[256];
-struct huffmanTree *head_huffmanTreeNode;
-struct huffmanTree huffmanTreeNode[512];
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//helper functions
+void intitialize_frequency(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData);
+unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, struct huffmanTree *huffmanTreeNode);
+void sort_huffman_tree(int i, int distinctCharacterCount, int combinedHuffmanNodes, struct huffmanTree *huffmanTreeNode);
+void build_huffman_tree(int i, int distinctCharacterCount, int combinedHuffmanNodes, struct huffmanTree *huffmanTreeNode, struct huffmanTree **head_huffmanTreeNode);
+void build_huffman_dictionary(struct huffmanTree *root, unsigned char *bitSequence, unsigned char bitSequenceLength, 	struct huffmanDictionary *huffmanDictionary);
+int wrapperGPU(char **file, unsigned char *inputFileData, int inputFileLength);
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* compressedBlockData);
 void reverse_huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* outputBlockData);
-void sortHuffmanTree(int i, int distinctCharacterCount, int combinedHuffmanNodes);
-void buildHuffmanTree(int i, int distinctCharacterCount, int combinedHuffmanNodes);
-void buildHuffmanDictionary(struct huffmanTree *root, unsigned char *bitSequence, unsigned char bitSequenceLength);
-int wrapperGPU(char **file, unsigned char *inputFileData, int inputFileLength);
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void intitialize_frequency(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData){
+	//compute frequency of input characters
+	for (unsigned int i = 0; i < 256; i++){
+		frequency[i] = 0;
+	}
+	for (unsigned int i = 0; i < inputBlockLength; i++){
+		frequency[inputBlockData[i]]++;
+	}
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, struct huffmanTree *huffmanTreeNode){
+	//initialize nodes of huffman tree
+	unsigned int distinctCharacterCount = 0;
+	for (unsigned int i = 0; i < 256; i++){
+		if (frequency[i] > 0){
+			huffmanTreeNode[distinctCharacterCount].count = frequency[i];
+			huffmanTreeNode[distinctCharacterCount].letter = i;
+			huffmanTreeNode[distinctCharacterCount].left = NULL;
+			huffmanTreeNode[distinctCharacterCount].right = NULL;
+			distinctCharacterCount++;
+		}
+	}
+	return distinctCharacterCount;
+}
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // sort nodes based on frequency
-void sortHuffmanTree(int i, int distinctCharacterCount, int mergedHuffmanNodes){
+void sort_huffman_tree(int i, int distinctCharacterCount, int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode){
 	int a, b;
 	for (a = mergedHuffmanNodes; a < distinctCharacterCount - 1 + i; a++){
 		for (b = mergedHuffmanNodes; b < distinctCharacterCount - 1 + i; b++){
@@ -47,25 +79,25 @@ void sortHuffmanTree(int i, int distinctCharacterCount, int mergedHuffmanNodes){
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // build tree based on sort result
-void buildHuffmanTree(int i, int distinctCharacterCount, int mergedHuffmanNodes){
+void build_huffman_tree(int i, int distinctCharacterCount, int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode, struct huffmanTree **head_huffmanTreeNode){
 	huffmanTreeNode[distinctCharacterCount + i].count = huffmanTreeNode[mergedHuffmanNodes].count + huffmanTreeNode[mergedHuffmanNodes + 1].count;
 	huffmanTreeNode[distinctCharacterCount + i].left = &huffmanTreeNode[mergedHuffmanNodes];
 	huffmanTreeNode[distinctCharacterCount + i].right = &huffmanTreeNode[mergedHuffmanNodes + 1];
-	head_huffmanTreeNode = &(huffmanTreeNode[distinctCharacterCount + i]);
+	*head_huffmanTreeNode = &(huffmanTreeNode[distinctCharacterCount + i]);
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // get bitSequence sequence for each char value
-void buildHuffmanDictionary(struct huffmanTree *root, unsigned char *bitSequence, unsigned char bitSequenceLength){
+void build_huffman_dictionary(struct huffmanTree *root, unsigned char *bitSequence, unsigned char bitSequenceLength, 	struct huffmanDictionary *huffmanDictionary){
 	if (root->left){
 		bitSequence[bitSequenceLength] = 0;
-		buildHuffmanDictionary(root->left, bitSequence, bitSequenceLength + 1);
+		build_huffman_dictionary(root->left, bitSequence, bitSequenceLength + 1, huffmanDictionary);
 	}
 
 	if (root->right){
 		bitSequence[bitSequenceLength] = 1;
-		buildHuffmanDictionary(root->right, bitSequence, bitSequenceLength + 1);
+		build_huffman_dictionary(root->right, bitSequence, bitSequenceLength + 1, huffmanDictionary);
 	}
 
 	if (root->left == NULL && root->right == NULL){
@@ -77,45 +109,32 @@ void buildHuffmanDictionary(struct huffmanTree *root, unsigned char *bitSequence
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* compressedBlockData){
-	unsigned int i, j;
-	unsigned int distinctCharacterCount, combinedHuffmanNodes;
+
+	unsigned int distinctCharacterCount = 0;
 	unsigned int compressedBlockLength;
 	unsigned char writeBit = 0, bitsFilled = 0, bitSequence[255], bitSequenceLength = 0;
 
-	//compute frequency of input characters
-	for (i = 0; i < 256; i++){
-		frequency[i] = 0;
-	}
-	for (i = 0; i < inputBlockLength; i++){
-		frequency[inputBlockData[i]]++;
-	}
+	intitialize_frequency(frequency, inputBlockLength, inputBlockData);
 
-	// initialize nodes of huffman tree
-	distinctCharacterCount = 0;
-	for (i = 0; i < 256; i++){
-		if (frequency[i] > 0){
-			huffmanTreeNode[distinctCharacterCount].count = frequency[i];
-			huffmanTreeNode[distinctCharacterCount].letter = i;
-			huffmanTreeNode[distinctCharacterCount].left = NULL;
-			huffmanTreeNode[distinctCharacterCount].right = NULL;
-			distinctCharacterCount++;
-		}
-	}
+	struct huffmanTree huffmanTreeNode[512];
+	distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency, huffmanTreeNode);
 
 	// build tree 
-	for (i = 0; i < distinctCharacterCount - 1; i++){
-		combinedHuffmanNodes = 2 * i;
-		sortHuffmanTree(i, distinctCharacterCount, combinedHuffmanNodes);
-		buildHuffmanTree(i, distinctCharacterCount, combinedHuffmanNodes);
+	struct huffmanTree *head_huffmanTreeNode = NULL;
+	for (unsigned int i = 0; i < distinctCharacterCount - 1; i++){
+		unsigned int combinedHuffmanNodes = 2 * i;
+		sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);
+		build_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode, &head_huffmanTreeNode);
 	}
 	
 	// build table having the bitSequence sequence and its length
-	buildHuffmanDictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength);
+	struct huffmanDictionary huffmanDictionary[256];
+	build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, 	huffmanDictionary);
 
 	// compress
 	compressedBlockLength = 0;
-	for (i = 0; i < inputBlockLength; i++){
-		for (j = 0; j < huffmanDictionary[inputBlockData[i]].bitSequenceLength; j++){
+	for (unsigned int i = 0; i < inputBlockLength; i++){
+		for (unsigned int j = 0; j < huffmanDictionary[inputBlockData[i]].bitSequenceLength; j++){
 			if (huffmanDictionary[inputBlockData[i]].bitSequence[j] == 0){
 				writeBit = writeBit << 1;
 				bitsFilled++;
@@ -134,7 +153,7 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 	}
 
 	if (bitsFilled != 0){
-		for (i = 0; (unsigned char)i < 8 - bitsFilled; i++){
+		for (unsigned int i = 0; (unsigned char)i < 8 - bitsFilled; i++){
 			writeBit = writeBit << 1;
 		}
 		compressedBlockData[compressedBlockLength] = writeBit;
@@ -148,37 +167,32 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 void reverse_huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* outputBlockData){
 	// initialize nodes of huffman tree
 	struct huffmanTree *current_huffmanTreeNode;
-	unsigned int distinctCharacterCount, combinedHuffmanNodes;
+	unsigned int distinctCharacterCount;
 	unsigned char currentInputBit, currentInputByte, bitSequence[255], bitSequenceLength = 0;
-	unsigned int i, j;
 	unsigned int outputBlockLength = 0;
-	distinctCharacterCount = 0;
-	for (i = 0; i < 256; i++){
-		if (frequency[i] > 0){
-			huffmanTreeNode[distinctCharacterCount].count = frequency[i];
-			huffmanTreeNode[distinctCharacterCount].letter = i;
-			huffmanTreeNode[distinctCharacterCount].left = NULL;
-			huffmanTreeNode[distinctCharacterCount].right = NULL;
-			distinctCharacterCount++;
-		}
-	}
+
+
+	struct huffmanTree huffmanTreeNode[512];
+	distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency, huffmanTreeNode);
 
 	// build tree 
-	for (i = 0; i < distinctCharacterCount - 1; i++){
-		combinedHuffmanNodes = 2 * i;
-		sortHuffmanTree(i, distinctCharacterCount, combinedHuffmanNodes);
-		buildHuffmanTree(i, distinctCharacterCount, combinedHuffmanNodes);
+	struct huffmanTree *head_huffmanTreeNode = NULL;
+	for (unsigned int i = 0; i < distinctCharacterCount - 1; i++){
+		unsigned int combinedHuffmanNodes = 2 * i;
+		sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);
+		build_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode, &head_huffmanTreeNode);
 	}
-
-	// build huffmanDictionary having the bitSequence sequence and its length
-	buildHuffmanDictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength);
+	
+	// build table having the bitSequence sequence and its length
+	struct huffmanDictionary huffmanDictionary[256];
+	build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, 	huffmanDictionary);
 
 	// write the data to file
 	current_huffmanTreeNode = head_huffmanTreeNode;
 	outputBlockLength = 0;
-	for (i = 0; i < inputBlockLength; i++){
+	for (unsigned int i = 0; i < inputBlockLength; i++){
 		currentInputByte = inputBlockData[i];
-		for (j = 0; j < 8; j++){
+		for (unsigned int j = 0; j < 8; j++){
 			currentInputBit = currentInputByte & 0200;
 			currentInputByte = currentInputByte << 1;
 			if (currentInputBit == 0){

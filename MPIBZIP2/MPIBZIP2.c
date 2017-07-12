@@ -8,7 +8,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "../Headers/huffman.h"
+#include "../Headers/huffman_serial.h"
 #include "../Headers/bwt.h"
 #include "../Headers/mtf.h"
 
@@ -38,8 +38,8 @@ int main(int argc, char **argv){
 	MPI_Status status;
 
 	// get rank and number of processes value
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
+	MPI_Comm_rank(MPI_COMM_WORLD, (int *)&rank);
+	MPI_Comm_size(MPI_COMM_WORLD, (int *)&numProcesses);
 
 	// get file size
 	if(rank == 0){

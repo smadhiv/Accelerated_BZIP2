@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "../Headers/bwt.h"
+#include "../../Headers/bwt.h"
 
 //do BWT
 int main(int argc, char **argv){

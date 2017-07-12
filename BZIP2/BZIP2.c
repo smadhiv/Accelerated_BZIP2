@@ -7,7 +7,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "../Headers/huffman.h"
+#include "../Headers/huffman_serial.h"
 #include "../Headers/bwt.h"
 #include "../Headers/mtf.h"
 
