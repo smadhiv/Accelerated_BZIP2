@@ -2,15 +2,14 @@
 //Sriram Madhivanan
 //MPI Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-#define BLOCK_SIZE 900009
 #include "mpi.h"
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "../Headers/huffman_serial.h"
-#include "../Headers/ubwt.h"
-#include "../Headers/umtf.h"
+#include "../library/huffman/serial/uhuffman_serial.h"
+#include "../library/bwt/ubwt.h"
+#include "../library/mtf/umtf.h"
 
 int main(int argc, char **argv){
 	clock_t start, end;
@@ -19,10 +18,10 @@ int main(int argc, char **argv){
 	//file information
 	unsigned int compressedBlockLenth, inputBlockLength;
 	unsigned int frequency[256];
-	unsigned char inputBlockData[2 * BLOCK_SIZE];
-	unsigned char huffmanOutputData[BLOCK_SIZE];
-  unsigned char mtfOutputData[BLOCK_SIZE];
-	unsigned char bwtOutputData[BLOCK_SIZE - 9];
+	unsigned char inputBlockData[2 * (BLOCK_SIZE + 9)];
+	unsigned char huffmanOutputData[BLOCK_SIZE + 9];
+  unsigned char mtfOutputData[BLOCK_SIZE + 9];
+	unsigned char bwtOutputData[BLOCK_SIZE];
 	unsigned int outputFileLength;
 
 	//structure to hold dictionary data

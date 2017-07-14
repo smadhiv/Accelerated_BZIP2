@@ -2,14 +2,18 @@
 //Sriram Madhivanan
 //bzip2 Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-#define BLOCK_SIZE 900000
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include "../Headers/huffman_serial.h"
-#include "../Headers/bwt.h"
-#include "../Headers/mtf.h"
+#include "../library/huffman/serial/huffman_serial.h"
+#include "../library/bwt/bwt.h"
+#include "../library/mtf/mtf.h"
+
+//global variables to be used in qsort function
+extern unsigned int inputBlockLength;
+//store input block data
+extern unsigned char inputBlockData[BLOCK_SIZE];
 
 int main(int argc, char **argv){
   //time measurement

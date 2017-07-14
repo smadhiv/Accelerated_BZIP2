@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //Sriram Madhivanan
-//huffman GPU Implementation
+//GPU Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 #include <stdio.h>
@@ -9,26 +9,25 @@
 #include <time.h>
 #include <limits.h>
 #include "../include/parallelHeader.h"
-#include "../../../Headers/huffman_parallel.h"
 #define block_size 1024
-#define BLOCK_SIZE 900000
 #define MIN_SCRATCH_SIZE 50 * 1024 * 1024
 
-int main(int argc, char **argv){
-	clock_t start, end;
-	unsigned int cpu_time_used;
-	unsigned int frequency[256], compressedBlockLength, inputBlockLength;
-	unsigned char inputBlockData[BLOCK_SIZE], compressedBlockData[2 * BLOCK_SIZE];
-	FILE *inputFile, *compressedFile;
+unsigned char bitSequenceConstMemory[256][255];
+struct huffmanDictionary huffmanDictionary;
+unsigned int constMemoryFlag = 0;
 
+int main(int argc, char **argv){
 	unsigned int i;
-	unsigned int distinctCharacterCount, combinedHuffmanNodes, inputFileLength;
-	unsigned char *inputFileData, bitSequenceLength = 0, bitSequence[255];
+	unsigned int distinctCharacterCount, combinedHuffmanNodes, inputFileLength, frequency[256];
+	unsigned char *inputFileData, *outputFileData;
+	unsigned char bitSequenceLength = 0, bitSequence[255];
 	unsigned int *compressedDataOffset, cpu_time_used;
 	unsigned int integerOverflowFlag;
+	FILE *inputFile, *compressedFile;
 	long unsigned int mem_free, mem_total;
 	long unsigned int mem_req, mem_offset, mem_data;
 	int numKernelRuns;
+	clock_t start, end;
 	
 	// check number of args
 	if(argc != 3){
@@ -36,50 +35,23 @@ int main(int argc, char **argv){
 		return -1;
 	}
 
-	// read input file, get filelength and data
-	inputFile = fopen(argv[1], "rb");
-	compressedFile = fopen(argv[2], "wb");
-
-	// start time measure
+	// calculate run duration
 	start = clock();
-
+	
 	// read input file, get inputFileLength and data
+	inputFile = fopen(argv[1], "rb");
 	fseek(inputFile, 0, SEEK_END);
 	inputFileLength = ftell(inputFile);
 	fseek(inputFile, 0, SEEK_SET);
 	inputFileData = (unsigned char *)malloc(inputFileLength * sizeof(unsigned char));
 	fread(inputFileData, sizeof(unsigned char), inputFileLength, inputFile);
 	fclose(inputFile);
-		
-	// find the frequency of each symbols
-	for (i = 0; i < 256; i++){
-		frequency[i] = 0;
-	}
-	for (i = 0; i < inputFileLength; i++){
-		frequency[inputFileData[i]]++;
-	}
+	
+	//allocate memory for output data
+	outputFileData = (unsigned char *)malloc(1024 + 2 * inputFileLength * sizeof(unsigned char));
 
-	// initialize nodes of huffman tree
-	distinctCharacterCount = 0;
-	for (i = 0; i < 256; i++){
-		if (frequency[i] > 0){
-			huffmanTreeNode[distinctCharacterCount].count = frequency[i];
-			huffmanTreeNode[distinctCharacterCount].letter = i;
-			huffmanTreeNode[distinctCharacterCount].left = NULL;
-			huffmanTreeNode[distinctCharacterCount].right = NULL;
-			distinctCharacterCount++;
-		}
-	}
-	
-	// build tree 
-	for (i = 0; i < distinctCharacterCount - 1; i++){
-		combinedHuffmanNodes = 2 * i;
-		sortHuffmanTree(i, distinctCharacterCount, combinedHuffmanNodes);
-		buildHuffmanTree(i, distinctCharacterCount, combinedHuffmanNodes);
-	}
-	
-	// build table having the bitSequence sequence and its length
-	buildHuffmanDictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength);
+	//perform huffman
+	huffman_encoding(frequency, inputFileData, inputFileData, outputFileData);
 	
 	// calculate memory requirements
 	// GPU memory

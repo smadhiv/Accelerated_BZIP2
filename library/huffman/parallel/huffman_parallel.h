@@ -1,20 +1,21 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //Sriram Madhivanan
-//Header used for serial and MPI-only implementations
+//Header used for cuda implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//dictionary struct that holds the sequence and its length
 struct huffmanDictionary
 {
-	unsigned char bitSequence[255];
-	unsigned char bitSequenceLength;
+	unsigned char bitSequence[256][191];
+	unsigned char bitSequenceLength[256];
 };
 
+//huffmantree node struct that  holds the character and its frequency
 struct huffmanTree
 {
 	unsigned char letter;
 	unsigned int count;
 	struct huffmanTree *left, *right;
 };
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -35,6 +36,7 @@ void reverse_huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//initialize frequency array with histogram of input data
 void intitialize_frequency(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData){
 	//compute frequency of input characters
 	for (unsigned int i = 0; i < 256; i++){
@@ -47,6 +49,8 @@ void intitialize_frequency(unsigned int *frequency, unsigned int inputBlockLengt
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//intitialize huffmantree nodes with the character and its frequency
+//returns the number of distinct values in the given input data
 unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, struct huffmanTree *huffmanTreeNode){
 	//initialize nodes of huffman tree
 	unsigned int distinctCharacterCount = 0;
@@ -64,7 +68,7 @@ unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *freq
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-// sort nodes based on frequency
+// sort huffmantree nodes based on frequency
 void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode){
 	unsigned int a, b;
 	for (a = mergedHuffmanNodes; a < distinctCharacterCount - 1 + i; a++){
@@ -80,7 +84,7 @@ void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsi
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-// build tree based on sort result
+// build tree based on the above sort result
 void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode, struct huffmanTree **head_huffmanTreeNode){
 	huffmanTreeNode[distinctCharacterCount + i].count = huffmanTreeNode[mergedHuffmanNodes].count + huffmanTreeNode[mergedHuffmanNodes + 1].count;
 	huffmanTreeNode[distinctCharacterCount + i].left = &huffmanTreeNode[mergedHuffmanNodes];
@@ -90,7 +94,7 @@ void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, uns
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-// get bitSequence sequence for each char value
+// get bitSequence sequence for each character value
 void build_huffman_dictionary(struct huffmanTree *root, unsigned char *bitSequence, unsigned char bitSequenceLength, 	struct huffmanDictionary *huffmanDictionary){
 	if (root->left){
 		bitSequence[bitSequenceLength] = 0;
@@ -103,13 +107,21 @@ void build_huffman_dictionary(struct huffmanTree *root, unsigned char *bitSequen
 	}
 
 	if (root->left == NULL && root->right == NULL){
-		huffmanDictionary[root->letter].bitSequenceLength = bitSequenceLength;
-		memcpy(huffmanDictionary[root->letter].bitSequence, bitSequence, bitSequenceLength * sizeof(unsigned char));
+		huffmanDictionary.bitSequenceLength[root->letter] = bitSequenceLength;
+		if(bitSequenceLength < 192){
+			memcpy(huffmanDictionary.bitSequence[root->letter], bitSequence, bitSequenceLength * sizeof(unsigned char));
+		}
+		else{
+			memcpy(bitSequenceConstMemory[root->letter], bitSequence, bitSequenceLength * sizeof(unsigned char));
+			memcpy(huffmanDictionary.bitSequence[root->letter], bitSequence, 191);
+			constMemoryFlag = 1;
+		}
 	}
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//builds the output data 
 unsigned int generate_compressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *compressedBlockData, struct huffmanDictionary *huffmanDictionary){
 	unsigned char writeBit = 0, bitsFilled = 0;
 	unsigned int compressedBlockLength = 0;
@@ -145,6 +157,7 @@ unsigned int generate_compressed_data(unsigned int inputBlockLength, unsigned ch
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//builds the uncompressed data
 unsigned int generate_uncompressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *outputBlockData, struct huffmanTree *head_huffmanTreeNode){
 	struct huffmanTree *current_huffmanTreeNode = head_huffmanTreeNode;
 	unsigned int outputBlockLength = 0;
@@ -174,8 +187,9 @@ unsigned int generate_uncompressed_data(unsigned int inputBlockLength, unsigned 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// the function calls above functions to generate compressed data
+//returns the size of compressed data
 unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* compressedBlockData){
-
 	intitialize_frequency(frequency, inputBlockLength, inputBlockData);
 
 	struct huffmanTree huffmanTreeNode[512];
@@ -195,14 +209,16 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 	build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, 	huffmanDictionary);
 
 	// compress
-	unsigned int compressedBlockLength = generate_compressed_data(inputBlockLength, inputBlockData, compressedBlockData, huffmanDictionary);
-	return compressedBlockLength;
+	//unsigned int compressedBlockLength = generate_compressed_data(inputBlockLength, inputBlockData, compressedBlockData, huffmanDictionary);
+	//return compressedBlockLength;
+	return 0;
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// the function calls above functions to generate uncompressed data
+//returns the size of uncompressed data
 void reverse_huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* outputBlockData){
-
 	struct huffmanTree huffmanTreeNode[512];
 	unsigned int distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency, huffmanTreeNode);
 
@@ -217,4 +233,123 @@ void reverse_huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 	// write the data to file
 	generate_uncompressed_data(inputBlockLength, inputBlockData, outputBlockData, head_huffmanTreeNode);
 }
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// generate data offset array 
+// case - single run, no overflow
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void createDataOffsetArray(unsigned int *compressedDataOffset, unsigned char* inputFileData, unsigned int inputFileLength){
+	int i;
+	compressedDataOffset[0] = 0;
+	for(i = 0; i < inputFileLength; i++){
+		compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]] + compressedDataOffset[i];
+	}
+	if(compressedDataOffset[inputFileLength] % 8 != 0){
+		compressedDataOffset[inputFileLength] = compressedDataOffset[inputFileLength] + (8 - (compressedDataOffset[inputFileLength] % 8));
+	}		
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// generate data offset array 
+// case - single run, with overflow
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void createDataOffsetArray(unsigned int *compressedDataOffset, unsigned char* inputFileData, unsigned int inputFileLength, unsigned int *integerOverflowIndex, unsigned int *bitPaddingFlag, int numBytes){
+	int i, j;
+	// calculate compressed data offset - (1048576 is a safe number that will ensure there is no integer overflow in GPU, it should be minimum 8 * number of threads)
+	j = 0;
+	compressedDataOffset[0] = 0;
+	for(i = 0; i < inputFileLength; i++){
+		compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]] + compressedDataOffset[i];
+		if(compressedDataOffset[i + 1] + numBytes < compressedDataOffset[i]){
+			integerOverflowIndex[j] = i;
+			if(compressedDataOffset[i] % 8 != 0){
+				bitPaddingFlag[j] = 1;
+				compressedDataOffset[i + 1] = (compressedDataOffset[i] % 8) + huffmanDictionary.bitSequenceLength[inputFileData[i]];
+				compressedDataOffset[i] = compressedDataOffset[i] + (8 - (compressedDataOffset[i] % 8));
+			}
+			else{
+				compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]];			
+			}
+			j++;
+		}
+	}
+	if(compressedDataOffset[inputFileLength] % 8 != 0){
+		compressedDataOffset[inputFileLength] = compressedDataOffset[inputFileLength] + (8 - (compressedDataOffset[inputFileLength] % 8));
+	}
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// generate data offset array 
+// case - multiple run, no overflow
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void createDataOffsetArray(unsigned int *compressedDataOffset, unsigned char* inputFileData, unsigned int inputFileLength, unsigned int *gpuMemoryOverflowIndex, unsigned int *gpuBitPaddingFlag, long unsigned int mem_req){
+	int i, j;
+	j = 0;
+	gpuMemoryOverflowIndex[0] = 0;
+	gpuBitPaddingFlag[0] = 0;
+	compressedDataOffset[0] = 0;
+	for(i = 0; i < inputFileLength; i++){
+		compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]] + compressedDataOffset[i];
+		if(compressedDataOffset[i + 1] > mem_req){
+			gpuMemoryOverflowIndex[j * 2 + 1] = i;
+			gpuMemoryOverflowIndex[j * 2 + 2] = i + 1;
+			if(compressedDataOffset[i] % 8 != 0){
+				gpuBitPaddingFlag[j + 1] = 1;
+				compressedDataOffset[i + 1] = (compressedDataOffset[i] % 8) + huffmanDictionary.bitSequenceLength[inputFileData[i]];
+				compressedDataOffset[i] = compressedDataOffset[i] + (8 - (compressedDataOffset[i] % 8));
+			}
+			else{
+				compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]];			
+			}
+			j++;
+		}
+	}
+	if(compressedDataOffset[inputFileLength] % 8 != 0){
+		compressedDataOffset[inputFileLength] = compressedDataOffset[inputFileLength] + (8 - (compressedDataOffset[inputFileLength] % 8));
+	}
+	gpuMemoryOverflowIndex[j * 2 + 1] = inputFileLength;
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// generate data offset array
+// case - multiple run, with overflow
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void createDataOffsetArray(unsigned int *compressedDataOffset, unsigned char* inputFileData, unsigned int inputFileLength, unsigned int *integerOverflowIndex, unsigned int *bitPaddingFlag, unsigned int *gpuMemoryOverflowIndex, unsigned int *gpuBitPaddingFlag, int numBytes, long unsigned int mem_req){
+	int i, j, k;
+	j = 0;
+	k = 0;
+	compressedDataOffset[0] = 0;
+	for(i = 0; i < inputFileLength; i++){
+		compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]] + compressedDataOffset[i];
+		if(j != 0 && ((long unsigned int)compressedDataOffset[i + 1] + compressedDataOffset[integerOverflowIndex[j - 1]] > mem_req)){
+			gpuMemoryOverflowIndex[k * 2 + 1] = i;
+			gpuMemoryOverflowIndex[k * 2 + 2] = i + 1;
+			if(compressedDataOffset[i] % 8 != 0){
+				gpuBitPaddingFlag[k + 1] = 1;
+				compressedDataOffset[i + 1] = (compressedDataOffset[i] % 8) + huffmanDictionary.bitSequenceLength[inputFileData[i]];
+				compressedDataOffset[i] = compressedDataOffset[i] + (8 - (compressedDataOffset[i] % 8));
+			}
+			else{
+				compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]];			
+			}
+			k++;
+		}
+		else if(compressedDataOffset[i + 1] + numBytes < compressedDataOffset[i]){
+			integerOverflowIndex[j] = i;
+			if(compressedDataOffset[i] % 8 != 0){
+				bitPaddingFlag[j] = 1;
+				compressedDataOffset[i + 1] = (compressedDataOffset[i] % 8) + huffmanDictionary.bitSequenceLength[inputFileData[i]];
+				compressedDataOffset[i] = compressedDataOffset[i] + (8 - (compressedDataOffset[i] % 8));
+			}
+			else{
+				compressedDataOffset[i + 1] = huffmanDictionary.bitSequenceLength[inputFileData[i]];	
+			}
+			j++;
+		}
+	}
+	if(compressedDataOffset[inputFileLength] % 8 != 0){
+		compressedDataOffset[inputFileLength] = compressedDataOffset[inputFileLength] + (8 - (compressedDataOffset[inputFileLength] % 8));
+	}
+	gpuMemoryOverflowIndex[j * 2 + 1] = inputFileLength;
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/

@@ -1,19 +1,9 @@
-/*******************************************************************************************/
+#include "bwt.h"
+
 //global variables to be used in qsort function
 unsigned int inputBlockLength;
 //store input block data
 unsigned char inputBlockData[BLOCK_SIZE];
-/*******************************************************************************************/
-
-/*******************************************************************************************/
-//BWT functions
-void burrows_wheeler_transform(unsigned char *outputBlockData);
-//for the qsort
-int compare( const unsigned int *index1, const unsigned int *index2 );
-//to store int in char array
-void serialize_int(unsigned char *outputBlockData, unsigned int value, unsigned int *count);
-/*******************************************************************************************/
-
 
 /*******************************************************************************************/
 //BWT

@@ -2,12 +2,7 @@
 //Sriram Madhivanan
 //MTF Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-#define BLOCK_SIZE 900000
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include "../../Headers/mtf.h"
+#include "../../library/mtf/mtf.h"
 
 int main(int argc, char **argv){
 	//to measure time

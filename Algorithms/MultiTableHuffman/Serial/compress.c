@@ -2,14 +2,7 @@
 //Sriram Madhivanan
 //huffman serial Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<time.h>
-#include <limits.h>
-#include "../../../Headers/huffman_serial.h"
-#define BLOCK_SIZE 900000
-#define MIN_SCRATCH_SIZE 50 * 1024 * 1024
+#include "../../../library/huffman/serial/huffman_serial.h"
 
 int main(int argc, char **argv){
 	clock_t start, end;

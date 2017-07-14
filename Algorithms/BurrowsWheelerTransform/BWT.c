@@ -1,14 +1,13 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //Sriram Madhivanan
 //BWT Implementation
-//convert putc to fwrite
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-#define BLOCK_SIZE 900000
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include "../../Headers/bwt.h"
+#include "../../library/bwt/bwt.h"
+
+//global variables to be used in qsort function
+extern unsigned int inputBlockLength;
+//store input block data
+extern unsigned char inputBlockData[BLOCK_SIZE];
 
 //do BWT
 int main(int argc, char **argv){

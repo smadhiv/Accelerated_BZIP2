@@ -2,12 +2,7 @@
 //Sriram Madhivanan
 //revere MTF Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-#define BLOCK_SIZE 900000
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include "../../Headers/umtf.h"
+#include "../../library/mtf/umtf.h"
 
 int main(int argc, char **argv){
 	//time measurement
