@@ -1,6 +1,30 @@
 #include "huffman_serial.h"
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+unsigned int compute_mem_offset(unsigned int *frequency, struct huffmanDictionary* huffmanDictionary){
+	// offset array requirements
+	long unsigned int mem_offset = 0;
+	for(unsigned int i = 0; i < 256; i++){
+		mem_offset += frequency[i] * (*huffmanDictionary).bitSequenceLength[i];
+	}
+	mem_offset = mem_offset % 8 == 0 ? mem_offset : mem_offset + 8 - mem_offset % 8;
+	return mem_offset;
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+	// other memory requirements
+	long unsigned int mem_data = inputFileLength + (inputFileLength + 1) * sizeof(unsigned int) + sizeof(*huffmanDictionary);
+	
+	if(mem_free - mem_data < MIN_SCRATCH_SIZE){
+		printf("\nExiting : Not enough memory on GPU\nmem_free = %lu\nmin_mem_req = %lu\n", mem_free, mem_data + MIN_SCRATCH_SIZE);
+		return -1;
+	}
+	mem_req = mem_free - mem_data - 10 * 1024 * 1024;
+
+}
+/**/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //initialize frequency array with histogram of input data
 void intitialize_frequency(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData){
 	//compute frequency of input characters
@@ -16,7 +40,7 @@ void intitialize_frequency(unsigned int *frequency, unsigned int inputBlockLengt
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //intitialize huffmantree nodes with the character and its frequency
 //returns the number of distinct values in the given input data
-unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, huffmanTree_t *huffmanTreeNode){
+unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, struct huffmanTree *huffmanTreeNode){
 	//initialize nodes of huffman tree
 	unsigned int distinctCharacterCount = 0;
 	for (unsigned int i = 0; i < 256; i++){
@@ -34,7 +58,7 @@ unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *freq
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // sort huffmantree nodes based on frequency
-void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, huffmanTree_t *huffmanTreeNode){
+void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode){
 	unsigned int a, b;
 	for (a = mergedHuffmanNodes; a < distinctCharacterCount - 1 + i; a++){
 		for (b = mergedHuffmanNodes; b < distinctCharacterCount - 1 + i; b++){
@@ -50,7 +74,7 @@ void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsi
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // build tree based on the above sort result
-void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, huffmanTree_t *huffmanTreeNode, huffmanTree_t **head_huffmanTreeNode){
+void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode, struct huffmanTree **head_huffmanTreeNode){
 	huffmanTreeNode[distinctCharacterCount + i].count = huffmanTreeNode[mergedHuffmanNodes].count + huffmanTreeNode[mergedHuffmanNodes + 1].count;
 	huffmanTreeNode[distinctCharacterCount + i].left = &huffmanTreeNode[mergedHuffmanNodes];
 	huffmanTreeNode[distinctCharacterCount + i].right = &huffmanTreeNode[mergedHuffmanNodes + 1];
@@ -60,27 +84,34 @@ void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, uns
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // get bitSequence sequence for each character value
-void build_huffman_dictionary(huffmanTree_t *root, unsigned char *bitSequence, unsigned char bitSequenceLength, 	huffmanDictionary_t *huffmanDictionary){
+void build_huffman_dictionary(struct huffmanTree *root, unsigned char *bitSequence, unsigned char bitSequenceLength, 	struct huffmanDictionary *huffmanDictionary){
 	if (root->left){
 		bitSequence[bitSequenceLength] = 0;
-		build_huffman_dictionary(root->left, bitSequence, bitSequenceLength + 1, huffmanDictionary);
+		build_huffman_dictionary(root->left, bitSequence, bitSequenceLength + 1);
 	}
 
 	if (root->right){
 		bitSequence[bitSequenceLength] = 1;
-		build_huffman_dictionary(root->right, bitSequence, bitSequenceLength + 1, huffmanDictionary);
+		build_huffman_dictionary(root->right, bitSequence, bitSequenceLength + 1);
 	}
 
 	if (root->left == NULL && root->right == NULL){
-		huffmanDictionary[root->letter].bitSequenceLength = bitSequenceLength;
-		memcpy(huffmanDictionary[root->letter].bitSequence, bitSequence, bitSequenceLength * sizeof(unsigned char));
+		(*huffmanDictionary).bitSequenceLength[root->letter] = bitSequenceLength;
+		if(bitSequenceLength < 192){
+			memcpy((*huffmanDictionary).bitSequence[root->letter], bitSequence, bitSequenceLength * sizeof(unsigned char));
+		}
+		else{
+			memcpy(bitSequenceConstMemory[root->letter], bitSequence, bitSequenceLength * sizeof(unsigned char));
+			memcpy((*huffmanDictionary).bitSequence[root->letter], bitSequence, 191);
+			constMemoryFlag = 1;
+		}
 	}
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //builds the output data 
-unsigned int generate_compressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *compressedBlockData, huffmanDictionary_t *huffmanDictionary){
+unsigned int generate_compressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *compressedBlockData, struct huffmanDictionary *huffmanDictionary){
 	unsigned char writeBit = 0, bitsFilled = 0;
 	unsigned int compressedBlockLength = 0;
 
@@ -120,11 +151,11 @@ unsigned int generate_compressed_data(unsigned int inputBlockLength, unsigned ch
 unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* compressedBlockData){
 	intitialize_frequency(frequency, inputBlockLength, inputBlockData);
 
-	huffmanTree_t huffmanTreeNode[512];
+	struct huffmanTree huffmanTreeNode[512];
 	unsigned int distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency, huffmanTreeNode);
 
 	// build tree 
-	huffmanTree_t *head_huffmanTreeNode = NULL;
+	struct huffmanTree *head_huffmanTreeNode = NULL;
 	for (unsigned int i = 0; i < distinctCharacterCount - 1; i++){
 		unsigned int combinedHuffmanNodes = 2 * i;
 		sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);
@@ -132,12 +163,27 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 	}
 	
 	// build table having the bitSequence sequence and its length
-	huffmanDictionary_t huffmanDictionary[256];
+	struct huffmanDictionary huffmanDictionary[256];
 	unsigned char bitSequence[255], bitSequenceLength = 0;
 	build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, 	huffmanDictionary);
 
 	// compress
 	unsigned int compressedBlockLength = generate_compressed_data(inputBlockLength, inputBlockData, compressedBlockData, huffmanDictionary);
 	return compressedBlockLength;
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+void create_data_offset_array_single_run(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, struct huffmanDictionary *huffmanDictionary){
+	
+	compressedDataOffset[0] = 0;
+	unsigned int *dataOffsetIndex = compressedDataOffset + index;
+	for(unsigned int i = 0; i < inputBlockLength; i++){
+		dataOffsetIndex[i + 1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[i]] + dataOffsetIndex[i];
+	}
+	if(dataOffsetIndex[inputBlockLength] % 8 != 0){
+		dataOffsetIndex[inputBlockLength] = dataOffsetIndex[inputBlockLength] + (8 - (dataOffsetIndex[inputBlockLength] % 8));
+	}		
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/

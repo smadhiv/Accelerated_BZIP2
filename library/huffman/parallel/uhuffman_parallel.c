@@ -3,7 +3,7 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //intitialize huffmantree nodes with the character and its frequency
 //returns the number of distinct values in the given input data
-unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, huffmanTree_t *huffmanTreeNode){
+unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, struct huffmanTree *huffmanTreeNode){
 	//initialize nodes of huffman tree
 	unsigned int distinctCharacterCount = 0;
 	for (unsigned int i = 0; i < 256; i++){
@@ -21,7 +21,7 @@ unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *freq
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // sort huffmantree nodes based on frequency
-void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, huffmanTree_t *huffmanTreeNode){
+void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode){
 	unsigned int a, b;
 	for (a = mergedHuffmanNodes; a < distinctCharacterCount - 1 + i; a++){
 		for (b = mergedHuffmanNodes; b < distinctCharacterCount - 1 + i; b++){
@@ -37,7 +37,7 @@ void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsi
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // build tree based on the above sort result
-void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, huffmanTree_t *huffmanTreeNode, huffmanTree_t **head_huffmanTreeNode){
+void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int mergedHuffmanNodes, struct huffmanTree *huffmanTreeNode, struct huffmanTree **head_huffmanTreeNode){
 	huffmanTreeNode[distinctCharacterCount + i].count = huffmanTreeNode[mergedHuffmanNodes].count + huffmanTreeNode[mergedHuffmanNodes + 1].count;
 	huffmanTreeNode[distinctCharacterCount + i].left = &huffmanTreeNode[mergedHuffmanNodes];
 	huffmanTreeNode[distinctCharacterCount + i].right = &huffmanTreeNode[mergedHuffmanNodes + 1];
@@ -47,7 +47,7 @@ void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, uns
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //builds the uncompressed data
-unsigned int generate_uncompressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *outputBlockData, huffmanTree_t *head_huffmanTreeNode){
+unsigned int generate_uncompressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *outputBlockData, struct huffmanTree *head_huffmanTreeNode){
 	struct huffmanTree *current_huffmanTreeNode = head_huffmanTreeNode;
 	unsigned int outputBlockLength = 0;
 	for (unsigned int i = 0; i < inputBlockLength; i++){
@@ -79,11 +79,11 @@ unsigned int generate_uncompressed_data(unsigned int inputBlockLength, unsigned 
 // the function calls above functions to generate uncompressed data
 //returns the size of uncompressed data
 void reverse_huffman_encoding(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData, unsigned char* outputBlockData){
-	huffmanTree_t huffmanTreeNode[512];
+	struct huffmanTree huffmanTreeNode[512];
 	unsigned int distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency, huffmanTreeNode);
 
 	// build tree 
-	huffmanTree_t *head_huffmanTreeNode = NULL;
+	struct huffmanTree *head_huffmanTreeNode = NULL;
 	for (unsigned int i = 0; i < distinctCharacterCount - 1; i++){
 		unsigned int combinedHuffmanNodes = 2 * i;
 		sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);

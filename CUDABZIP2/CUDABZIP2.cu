@@ -3,7 +3,6 @@
 //GPU Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 #define MIN_SCRATCH_SIZE 50 * 1024 * 1024
-#define BLOCK_SIZE 900000
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>

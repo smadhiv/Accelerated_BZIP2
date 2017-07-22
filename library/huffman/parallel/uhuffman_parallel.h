@@ -11,21 +11,28 @@
 #define BLOCK_SIZE 900000
 #endif
 
+//dictionary struct that holds the sequence and its length
+struct huffmanDictionary
+{
+	unsigned char bitSequence[255];
+	unsigned char bitSequenceLength;
+};
+
 //huffmantree node struct that  holds the character and its frequency
-typedef struct huffmanTree
+struct huffmanTree
 {
 	unsigned char letter;
 	unsigned int count;
 	struct huffmanTree *left, *right;
-} huffmanTree_t;
+};
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //helper functions
-unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, huffmanTree_t *huffmanTreeNode);
-void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int combinedHuffmanNodes, huffmanTree_t *huffmanTreeNode);
-void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int combinedHuffmanNodes, huffmanTree_t *huffmanTreeNode, huffmanTree_t **head_huffmanTreeNode);
-unsigned int generate_uncompressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *outputBlockData, huffmanTree_t *head_huffmanTreeNode);
+unsigned int intitialize_huffman_tree_get_distinct_char_count(unsigned int *frequency, struct huffmanTree *huffmanTreeNode);
+void sort_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int combinedHuffmanNodes, struct huffmanTree *huffmanTreeNode);
+void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, unsigned int combinedHuffmanNodes, struct huffmanTree *huffmanTreeNode, struct huffmanTree **head_huffmanTreeNode);
+unsigned int generate_uncompressed_data(unsigned int inputBlockLength, unsigned char *inputBlockData, unsigned char *outputBlockData, struct huffmanTree *head_huffmanTreeNode);
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
