@@ -1,6 +1,5 @@
 all: 
-	gcc -std=c11 -O3 -Wall -Wextra compress.c -o compress
-	gcc -std=c11 -O3 -Wall -Wextra decompress.c -o decompress
+	nvcc CUDACompress.cu cudaKernel.cu ../../../library/huffman/parallel/huffman_parallel.cu -o CUDACompress
 
 clean:
-	rm compress decompress
+	rm CUDACompress

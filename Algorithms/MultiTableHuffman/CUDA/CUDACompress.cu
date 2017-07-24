@@ -2,8 +2,9 @@
 //Sriram Madhivanan
 //GPU Implementation
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
+#ifndef huffman_parallel
 #include "../../../library/huffman/parallel/huffman_parallel.h"
-#include "../../../library/huffman/parallel/parallelHeader.h"
+#endif
 
 //global variables to be used in qsort function
 //extern unsigned int inputBlockLength;
@@ -11,7 +12,7 @@
 //remove this for cudabzip2
 unsigned char inputBlockData[BLOCK_SIZE];
 unsigned char bitSequenceConstMemory[256][255];
-unsigned int constMemoryFlag = 0;
+//unsigned int constMemoryFlag = 0;
 
 int main(int argc, char **argv){
 	clock_t start, end;
@@ -20,16 +21,14 @@ int main(int argc, char **argv){
 	unsigned int inputFileLength;
 	unsigned char *inputFileData, *compressedData;
 
-	struct huffmanTree *head_huffmanTreeNode;
-	struct huffmanTree huffmanTreeNode[512];
-
 	FILE *inputFile, *compressedFile;
 
 	//gpu specific
 	unsigned int *compressedDataOffset;
-	unsigned int integerOverflowFlag;
-	long unsigned int mem_req;
-	int numKernelRuns;
+	//unsigned int integerOverflowFlag;
+	//long unsigned int mem_req;
+	//int numKernelRuns;
+	cudaError_t error;
 
 	// check number of args
 	if(argc != 3){
@@ -56,12 +55,12 @@ int main(int argc, char **argv){
 
 	//allocate frequency
 	frequency = (unsigned int **)malloc(numInputDataBlocks * sizeof(unsigned int *));
-	for(unsigned int i = 0; i < numInputDataBlocks; di++){
-		frequency[i] = (int *)malloc(256 * sizeof(unsigned int));
+	for(unsigned int i = 0; i < numInputDataBlocks; i++){
+		frequency[i] = (unsigned int *)malloc(256 * sizeof(unsigned int));
 	}
 
 	//allocate dictionaries
-	struct huffmanDictionary *huffmanDictionary = (struct huffmanDictionary *)malloc(numInputDataBlocks * sizeof(struct huffmanDictionary));
+	huffmanDictionary_t *huffmanDictionary = (huffmanDictionary_t *)malloc(numInputDataBlocks * sizeof(huffmanDictionary_t));
 
 	//generate data offset array
 	compressedDataOffset = (unsigned int *)malloc((inputFileLength + 1) * sizeof(unsigned int));
@@ -81,11 +80,11 @@ int main(int argc, char **argv){
 		intitialize_frequency(frequency[count], inputBlockLength, inputBlockData);
 
 		// initialize nodes of huffman tree
-		struct huffmanTree huffmanTreeNode[512];
-		unsigned int distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency, huffmanTreeNode);
+		huffmanTree_t huffmanTreeNode[512];
+		unsigned int distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency[count], huffmanTreeNode);
 	
 		// build tree 
-		struct huffmanTree *head_huffmanTreeNode = NULL;
+		huffmanTree_t *head_huffmanTreeNode = NULL;
 		for (unsigned int i = 0; i < distinctCharacterCount - 1; i++){
 			unsigned int combinedHuffmanNodes = 2 * i;
 			sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);
@@ -94,93 +93,103 @@ int main(int argc, char **argv){
 	
 		// build table having the bitSequence sequence and its length
 		unsigned char bitSequence[255], bitSequenceLength = 0;
-		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, huffmanDictionary[count]);
-		create_data_offset_array((inputBlockPointer - inputFileData), compressedDataOffset, inputBlockData, inputBlockLength, huffmanDictionary[count]);
+		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[count]);
+		create_data_offset_array_single_run((inputBlockPointer - inputFileData), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[count]);
 		inputBlocksIndex[inputBlockPointer - inputFileData] = compressedDataOffset[inputBlockPointer - inputFileData];
 		count++;
 	}
 
+	compressedData = (unsigned char *)malloc(sizeof(unsigned char) * (compressedDataOffset[inputFileLength] / 8));
+
 	//gpu memory allocation
 	unsigned char *d_inputFileData, *d_byteCompressedData;
-	unsigned int *d_compressedDataOffset;
-	struct huffmanDictionary *d_huffmanDictionary;
+	unsigned int *d_compressedDataOffset, *d_inputBlocksIndex;
+	huffmanDictionary_t *d_huffmanDictionary;
 	
 	// allocate memory for input data, offset information and dictionary
 	error = cudaMalloc((void **)&d_inputFileData, inputFileLength * sizeof(unsigned char));
 	if (error != cudaSuccess)
 		printf("erro_1: %s\n", cudaGetErrorString(error));
-		
 	error = cudaMalloc((void **)&d_compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int));
 	if (error != cudaSuccess)
 		printf("erro_2: %s\n", cudaGetErrorString(error));
-	error = cudaMalloc((void **)&d_huffmanDictionary, numInputDataBlocks * sizeof(struct huffmanDictionary));
+	error = cudaMalloc((void **)&d_huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t));
 	if (error != cudaSuccess)
 		printf("erro_3: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_inputBlocksIndex, numInputDataBlocks * sizeof(unsigned int));
+	if (error != cudaSuccess)
+		printf("erro_4: %s\n", cudaGetErrorString(error));
 
-		// memory copy input data, offset information and dictionary
-		error = cudaMemcpy(d_inputFileData, inputFileData, inputFileLength * sizeof(unsigned char), cudaMemcpyHostToDevice);
-		if (error!= cudaSuccess)
-				printf("erro_4: %s\n", cudaGetErrorString(error));
-		error = cudaMemcpy(d_compressedDataOffset, compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int), cudaMemcpyHostToDevice);
-		if (error!= cudaSuccess)
-				printf("erro_5: %s\n", cudaGetErrorString(error));
-		error = cudaMemcpy(d_huffmanDictionary, &huffmanDictionary, numInputDataBlocks * sizeof(struct huffmanDictionary), cudaMemcpyHostToDevice);
-		if (error!= cudaSuccess)
-				printf("erro_6: %s\n", cudaGetErrorString(error));
+	// memory copy input data, offset information and dictionary
+	error = cudaMemcpy(d_inputFileData, inputFileData, inputFileLength * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_5: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_compressedDataOffset, compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_6: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_huffmanDictionary, &huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_7: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_inputBlocksIndex, &inputBlocksIndex, numInputDataBlocks * sizeof(unsigned int), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_8: %s\n", cudaGetErrorString(error));
+		
+	error = cudaMalloc((void **)&d_byteCompressedData, (compressedDataOffset[inputFileLength]) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_9: %s\n", cudaGetErrorString(error));
 			
-		// copy constant memory if required for dictionary
-		if(constMemoryFlag == 1){
-			error = cudaMemcpyToSymbol (d_bitSequenceConstMemory, bitSequenceConstMemory, 256 * 255 * sizeof(unsigned char));
-			if (error!= cudaSuccess)
-				printf("erro_const: %s\n", cudaGetErrorString(error));
-		}
+	// initialize d_byteCompressedData 
+	error = cudaMemset(d_byteCompressedData, 0, compressedDataOffset[inputFileLength] * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_10: %s\n", cudaGetErrorString(error));
 
+	// run kernel
+	compress<<<4, 1024>>>(d_inputBlocksIndex, d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks);
+	cudaError_t error_kernel = cudaGetLastError();
+	if (error_kernel != cudaSuccess)
+		printf("erro_final: %s\n", cudaGetErrorString(error_kernel));
 
-	// calculate memory requirements
-	long unsigned int mem_offset = compute_mem_offset(frequency, &huffmanDictionary);
-  long unsigned int mem_data = inputFileLength + (inputFileLength + 1) * sizeof(unsigned int) + sizeof(huffmanDictionary);
-
-	if(mem_free - mem_data < MIN_SCRATCH_SIZE){
-		printf("\nExiting : Not enough memory on GPU\nmem_free = %lu\nmin_mem_req = %lu\n", mem_free, mem_data + MIN_SCRATCH_SIZE);
-		return -1;
-	}
-
-	// GPU memory
-	long unsigned int mem_free, mem_total;
-	cudaMemGetInfo(&mem_free, &mem_total);
-	// debug
-	if(1){
-		printf("Free Mem: %lu\n", mem_free);		
-	}
-
-	mem_req = mem_free - mem_data - 10 * 1024 * 1024;
-	numKernelRuns = ceil((double)mem_offset / mem_req);
-	integerOverflowFlag = mem_req + 255 <= UINT_MAX || mem_offset + 255 <= UINT_MAX ? 0 : 1;
-
-	// debug
-	if(1){
-	printf("	InputFileSize      =%u\n\
-	OutputSize         =%u\n\
-	NumberOfKernel     =%d\n\
-	integerOverflowFlag=%d\n", inputFileLength, mem_offset/8, numKernelRuns, integerOverflowFlag);		
-	}
-
-	// launch kernel
-	lauchCUDAHuffmanCompress(inputFileData, compressedDataOffset, inputFileLength, numKernelRuns, integerOverflowFlag, mem_req);
+	// copy compressed data from GPU to CPU memory
+	error = cudaMemcpy(compressedData, d_inputFileData, ((compressedDataOffset[inputFileLength] / 8)) * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+	if (error != cudaSuccess)
+		printf("erro_copy_compressed_data: %s\n", cudaGetErrorString(error));
+			
+	// free allocated memory
+	cudaFree(d_inputFileData);
+	cudaFree(d_compressedDataOffset);
+	cudaFree(d_huffmanDictionary);
+	cudaFree(d_byteCompressedData);
+	cudaFree(d_inputBlocksIndex);
 
 	// calculate run duration
 	end = clock();
-	
 	// write src inputFileLength, header and compressed data to output file
 	compressedFile = fopen(argv[2], "wb");
-	fwrite(&inputFileLength, sizeof(unsigned int), 1, compressedFile);
-	fwrite(frequency, sizeof(unsigned int), 256, compressedFile);
-	fwrite(inputFileData, sizeof(unsigned char), mem_offset / 8, compressedFile);
+	
+	unsigned char *putputDataPtr = compressedData;
+	inputBlockLength = BLOCK_SIZE;
+	for(unsigned int i = 0; i < numInputDataBlocks - 1; i++){
+		unsigned int compressedBlockLength = (inputBlocksIndex[i + 1] - inputBlocksIndex[i]) / 8;
+		fwrite(&compressedBlockLength, sizeof(unsigned int), 1, compressedFile);
+		fwrite(&inputBlockLength, sizeof(unsigned int), 1, compressedFile);
+		fwrite(frequency[i], sizeof(unsigned int), 256, compressedFile);
+		fwrite(putputDataPtr, sizeof(unsigned char), compressedBlockLength, compressedFile);
+		putputDataPtr += compressedBlockLength;
+	}
+
+
+	compressedBlockLength = (compressedDataOffset[inputFileLength] - inputBlocksIndex[numInputDataBlocks - 1]) / 8;
+	fwrite(&compressedBlockLength, sizeof(unsigned int), 1, compressedFile);
+	inputBlockLength = inputFileLength % BLOCK_SIZE != 0 ? inputFileLength % BLOCK_SIZE : BLOCK_SIZE;
+	fwrite(&inputBlockLength, sizeof(unsigned int), 1, compressedFile);
+	fwrite(frequency[numInputDataBlocks - 1], sizeof(unsigned int), 256, compressedFile);
+	fwrite(putputDataPtr, sizeof(unsigned char), compressedBlockLength, compressedFile);
 	fclose(compressedFile);	
 	
 	cpu_time_used = ((end - start)) * 1000 / CLOCKS_PER_SEC;
 	printf("Time taken: %d:%d s\n", cpu_time_used / 1000, cpu_time_used % 1000);
 	free(inputFileData);
 	free(compressedDataOffset);
+	free(compressedData);
 	return 0;
 }
