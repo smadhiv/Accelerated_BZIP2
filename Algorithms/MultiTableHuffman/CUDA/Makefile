@@ -1,5 +1,5 @@
 all: 
-	nvcc CUDACompress.cu cudaKernel.cu ../../../library/huffman/parallel/huffman_parallel.cu -o CUDACompress
+	nvcc CUDACompress.cu cudaKernel.cu ../../../library/huffman/parallel/huffman_parallel.cu -o ../../../Bin/CUDACompress
 
 clean:
-	rm CUDACompress
+	rm ../../../Bin/CUDACompress
