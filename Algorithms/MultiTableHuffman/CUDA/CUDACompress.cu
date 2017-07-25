@@ -123,30 +123,37 @@ int main(int argc, char **argv){
 	error = cudaMalloc((void **)&d_inputBlocksIndex, numInputDataBlocks * sizeof(unsigned int));
 	if (error != cudaSuccess)
 		printf("erro_4: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_byteCompressedData, (compressedDataOffset[inputFileLength]) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_9: %s\n", cudaGetErrorString(error));
+
 
 	// memory copy input data, offset information and dictionary
 	error = cudaMemcpy(d_inputFileData, inputFileData, inputFileLength * sizeof(unsigned char), cudaMemcpyHostToDevice);
 	if (error!= cudaSuccess)
 			printf("erro_5: %s\n", cudaGetErrorString(error));
+	printf("malloc and copies done 1\n");
 	error = cudaMemcpy(d_compressedDataOffset, compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int), cudaMemcpyHostToDevice);
 	if (error!= cudaSuccess)
 			printf("erro_6: %s\n", cudaGetErrorString(error));
-	error = cudaMemcpy(d_huffmanDictionary, &huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t), cudaMemcpyHostToDevice);
+	printf("malloc and copies done 2\n");
+	error = cudaMemcpy(d_huffmanDictionary, huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t), cudaMemcpyHostToDevice);
 	if (error!= cudaSuccess)
 			printf("erro_7: %s\n", cudaGetErrorString(error));
-	error = cudaMemcpy(d_inputBlocksIndex, &inputBlocksIndex, numInputDataBlocks * sizeof(unsigned int), cudaMemcpyHostToDevice);
+	printf("malloc and copies done 3\n");
+	error = cudaMemcpy(d_inputBlocksIndex, inputBlocksIndex, numInputDataBlocks * sizeof(unsigned int), cudaMemcpyHostToDevice);
 	if (error!= cudaSuccess)
 			printf("erro_8: %s\n", cudaGetErrorString(error));
+	printf("malloc and copies done 4\n");
 		
-	error = cudaMalloc((void **)&d_byteCompressedData, (compressedDataOffset[inputFileLength]) * sizeof(unsigned char));
-	if (error!= cudaSuccess)
-		printf("erro_9: %s\n", cudaGetErrorString(error));
-			
+
 	// initialize d_byteCompressedData 
 	error = cudaMemset(d_byteCompressedData, 0, compressedDataOffset[inputFileLength] * sizeof(unsigned char));
 	if (error!= cudaSuccess)
 		printf("erro_10: %s\n", cudaGetErrorString(error));
-
+	
+	printf("before kernel\n");
+	
 	// run kernel
 	compress<<<4, 1024>>>(d_inputBlocksIndex, d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks);
 	cudaError_t error_kernel = cudaGetLastError();
