@@ -60,7 +60,7 @@ void build_huffman_tree(unsigned int i, unsigned int distinctCharacterCount, uns
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // get bitSequence sequence for each character value
-void build_huffman_dictionary(huffmanTree_t *root, unsigned char *bitSequence, unsigned char bitSequenceLength, 	huffmanDictionary_t *huffmanDictionary){
+void build_huffman_dictionary(huffmanTree_t *root, unsigned char *bitSequence, unsigned char bitSequenceLength, huffmanDictionary_t *huffmanDictionary){
 	if (root->left){
 		bitSequence[bitSequenceLength] = 0;
 		build_huffman_dictionary(root->left, bitSequence, bitSequenceLength + 1, huffmanDictionary);
@@ -130,7 +130,11 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 		sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);
 		build_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode, &head_huffmanTreeNode);
 	}
-	
+
+	if(distinctCharacterCount == 1){
+		head_huffmanTreeNode = &huffmanTreeNode[0];
+	}
+
 	// build table having the bitSequence sequence and its length
 	huffmanDictionary_t huffmanDictionary[256];
 	unsigned char bitSequence[255], bitSequenceLength = 0;

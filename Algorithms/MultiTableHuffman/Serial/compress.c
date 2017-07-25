@@ -23,15 +23,17 @@ int main(int argc, char **argv){
 
 	// start time measure
 	start = clock();
-	
+		
 	while( (inputBlockLength = fread(inputBlockData, 1, BLOCK_SIZE, inputFile)) ){
+		printf("b4 encode write\n");
 		compressedBlockLength = huffman_encoding(frequency, inputBlockLength, inputBlockData, compressedBlockData);
+		printf("after encode write\n");
 		fwrite(&compressedBlockLength, sizeof(unsigned int), 1, compressedFile);
 		fwrite(&inputBlockLength, sizeof(unsigned int), 1, compressedFile);
 		fwrite(frequency, sizeof(unsigned int), 256, compressedFile);
 		fwrite(compressedBlockData, sizeof(unsigned char), compressedBlockLength, compressedFile);
 	}
-	
+
 	// calculate run duration
 	end = clock();
 

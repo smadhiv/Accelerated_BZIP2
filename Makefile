@@ -8,8 +8,9 @@ bwt:
 	make -C "Algorithms/BurrowsWheelerTransform/"
 mtf:
 	make -C "Algorithms/MoveToFront/"
-huffman:
+cuda:
 	make -C "Algorithms/MultiTableHuffman/CUDA/"
+huffman:
 	make -C "Algorithms/MultiTableHuffman/Serial/"
 rle:
 	make -C "Algorithms/RunLengthEncoding/"

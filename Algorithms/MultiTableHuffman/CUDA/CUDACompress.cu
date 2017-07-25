@@ -91,6 +91,10 @@ int main(int argc, char **argv){
 			build_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode, &head_huffmanTreeNode);
 		}
 	
+		if(distinctCharacterCount == 1){
+		head_huffmanTreeNode = &huffmanTreeNode[0];
+		}
+
 		// build table having the bitSequence sequence and its length
 		unsigned char bitSequence[255], bitSequenceLength = 0;
 		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[count]);
