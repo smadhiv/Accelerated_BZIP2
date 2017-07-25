@@ -6,6 +6,7 @@
 
 # Misc
 *.txt
+TestFiles/enwik8
 
 # Precompiled Headers
 *.gch
@@ -36,7 +37,6 @@
 *.su
 
 # Folders
-/TestFiles
 /Backup
 /Old
 /scripts
