@@ -98,8 +98,8 @@ int main(int argc, char **argv){
 		// build table having the bitSequence sequence and its length
 		unsigned char bitSequence[255], bitSequenceLength = 0;
 		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[count]);
-		create_data_offset_array_single_run((inputBlockPointer - inputFileData), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[count]);
-		inputBlocksIndex[inputBlockPointer - inputFileData] = compressedDataOffset[inputBlockPointer - inputFileData];
+		create_data_offset_array_single_run((inputBlockPointer - inputFileData - inputBlockLength), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[count]);
+		inputBlocksIndex[count] = compressedDataOffset[inputBlockPointer - inputFileData];
 		count++;
 	}
 

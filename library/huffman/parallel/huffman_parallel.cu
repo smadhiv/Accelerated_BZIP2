@@ -14,19 +14,6 @@ unsigned int compute_mem_offset(unsigned int *frequency, huffmanDictionary_t* hu
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
-	/* other memory requirements
-	long unsigned int mem_data = inputFileLength + (inputFileLength + 1) * sizeof(unsigned int) + sizeof(huffmanDictionary_t);
-	
-	if(mem_free - mem_data < BLOCK_SIZE){
-		printf("\nExiting : Not enough memory on GPU\nmem_free = %lu\nmin_mem_req = %lu\n", mem_free, mem_data + MIN_SCRATCH_SIZE);
-		return -1;
-	}
-	mem_req = mem_free - mem_data - 10 * 1024 * 1024;
-}
-	*/
-
-/*---------------------------------------------------------------------------------------------------------------------------------------------*/
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //initialize frequency array with histogram of input data
 void intitialize_frequency(unsigned int *frequency, unsigned int inputBlockLength, unsigned char* inputBlockData){
