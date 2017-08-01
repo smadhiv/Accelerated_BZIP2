@@ -46,6 +46,7 @@ int main(int argc, char **argv){
 
 	//number of input blocks
 	unsigned int numInputDataBlocks = (unsigned int)(ceil((float)inputFileLength / BLOCK_SIZE));
+	printf("Number of blocks : %u\n", numInputDataBlocks);
 
 	//compute minimum memory req. get GPU memory
 	long unsigned int gpuMemoryRequired = 5 * inputFileLength * sizeof(unsigned char) + numInputDataBlocks * sizeof(huffmanDictionary_t) + (int)((float)inputFileLength/10) + 10 * 1024 * 1024;
