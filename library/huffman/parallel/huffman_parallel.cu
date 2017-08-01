@@ -166,12 +166,20 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
-void create_data_offset_array_single_run(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary){
+void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowBlockIndex, unsigned int *numIntegerOverflows){
 	
 	compressedDataOffset[0] = 0;
 	unsigned int *dataOffsetIndex = compressedDataOffset + index;
-	for(unsigned int i = 0; i < inputBlockLength; i++){
+	unsigned int i = 0;
+	while(i < inputBlockLength){
 		dataOffsetIndex[i + 1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[i]] + dataOffsetIndex[i];
+		if (dataOffsetIndex[i + 1] < dataOffsetIndex[i]){
+			integerOverFlowBlockIndex[(*numIntegerOverflows)] = index;
+			(*numIntegerOverflows)++;
+			dataOffsetIndex[1] = 0;
+			i = 0;
+		}
+		i++;
 	}
 	if(dataOffsetIndex[inputBlockLength] % 8 != 0){
 		dataOffsetIndex[inputBlockLength] = dataOffsetIndex[inputBlockLength] + (8 - (dataOffsetIndex[inputBlockLength] % 8));
