@@ -95,7 +95,6 @@ int main(int argc, char **argv){
 			sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);
 			build_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode, &head_huffmanTreeNode);
 		}
-	
 		if(distinctCharacterCount == 1){
 			head_huffmanTreeNode = &huffmanTreeNode[0];
 		}
@@ -104,11 +103,12 @@ int main(int argc, char **argv){
 		unsigned char bitSequence[255], bitSequenceLength = 0;
 		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[currentBlockIndex]);
 		create_data_offset_array((inputBlockPointer - inputFileData - inputBlockLength), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[currentBlockIndex], integerOverFlowIndex, &numIntegerOverflows);
-		inputBlocksIndex[currentBlockIndex + 1] = compressedDataOffset[inputBlockPointer - inputFileData + 1];
+		inputBlocksIndex[currentBlockIndex + 1] = compressedDataOffset[inputBlockPointer - inputFileData];
+		printf("%u=%u?\n", compressedDataOffset[inputFileLength], compressedDataOffset[inputBlockPointer - inputFileData]);
 		// may need to add +1 above on rhs
 		currentBlockIndex++;
 	}
-
+	
 	unsigned int compressedFileLength = compressedDataOffset[inputFileLength] / 8;
 	for(unsigned int i = 0; i < numIntegerOverflows; i++){
 		compressedFileLength += (compressedDataOffset[integerOverFlowIndex[i]] / 8);
@@ -161,17 +161,17 @@ int main(int argc, char **argv){
 		printf("With Overflow!!\n");
 		unsigned char *d_byteCompressedData_overflow;
 
-		error = cudaMalloc((void **)&d_byteCompressedData, (compressedDataOffset[inputFileLength]) * sizeof(unsigned char));
+		error = cudaMalloc((void **)&d_byteCompressedData, (compressedDataOffset[integerOverFlowIndex[0]]) * sizeof(unsigned char));
 		if (error!= cudaSuccess)
 			printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
-		error = cudaMemset(d_byteCompressedData, 0, compressedDataOffset[inputFileLength] * sizeof(unsigned char));
+		error = cudaMemset(d_byteCompressedData, 0, compressedDataOffset[integerOverFlowIndex[0]] * sizeof(unsigned char));
 		if (error!= cudaSuccess)
 			printf("erro_memset: %s\n", cudaGetErrorString(error));
 
-		error = cudaMalloc((void **)&d_byteCompressedData_overflow, (compressedDataOffset[integerOverFlowIndex[0]]) * sizeof(unsigned char));
+		error = cudaMalloc((void **)&d_byteCompressedData_overflow, (compressedDataOffset[inputFileLength]) * sizeof(unsigned char));
 		if (error!= cudaSuccess)
 			printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
-		error = cudaMemset(d_byteCompressedData_overflow, 0, compressedDataOffset[integerOverFlowIndex[0]] * sizeof(unsigned char));
+		error = cudaMemset(d_byteCompressedData_overflow, 0, compressedDataOffset[inputFileLength] * sizeof(unsigned char));
 		if (error!= cudaSuccess)
 			printf("erro_memset: %s\n", cudaGetErrorString(error));
 
