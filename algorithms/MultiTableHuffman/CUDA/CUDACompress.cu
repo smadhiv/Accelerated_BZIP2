@@ -196,11 +196,9 @@ int main(int argc, char **argv){
 	compressedFile = fopen(argv[2], "wb");
 	unsigned char *putputDataPtr = compressedData;
 	for(unsigned int i = 0; i < numInputDataBlocks; i++){
-		unsigned int compressedBlockLength = (inputBlocksIndex[i + 1] - inputBlocksIndex[i]) / 8;
-		//for overfow above line won't work
-		if(1){
+		//accounting for integeroverflow below
+		unsigned int compressedBlockLength = inputBlocksIndex[i + 1] > inputBlocksIndex[i] ? (inputBlocksIndex[i + 1] - inputBlocksIndex[i]) / 8 : inputBlocksIndex[i + 1] / 8;
 
-		}
 		inputBlockLength = i != numInputDataBlocks - 1 ? BLOCK_SIZE : (inputFileLength % BLOCK_SIZE != 0 ? inputFileLength % BLOCK_SIZE : BLOCK_SIZE);
 
 		fwrite(&compressedBlockLength, sizeof(unsigned int), 1, compressedFile);
