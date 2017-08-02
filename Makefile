@@ -1,18 +1,18 @@
 all:
-	make -C "Algorithms/BurrowsWheelerTransform/"
-	make -C "Algorithms/MoveToFront/"
-	make -C "Algorithms/MultiTableHuffman/CUDA/"
-	make -C "Algorithms/MultiTableHuffman/Serial/"
-	make -C "Algorithms/RunLengthEncoding/"
+	make -C "algorithms/BurrowsWheelerTransform/"
+	make -C "algorithms/MoveToFront/"
+	make -C "algorithms/MultiTableHuffman/CUDA/"
+	make -C "algorithms/MultiTableHuffman/Serial/"
+	make -C "algorithms/RunLengthEncoding/"
 bwt:
-	make -C "Algorithms/BurrowsWheelerTransform/"
+	make -C "algorithms/BurrowsWheelerTransform/"
 mtf:
-	make -C "Algorithms/MoveToFront/"
+	make -C "algorithms/MoveToFront/"
 cuda:
-	make -C "Algorithms/MultiTableHuffman/CUDA/"
+	make -C "algorithms/MultiTableHuffman/CUDA/"
 huffman:
-	make -C "Algorithms/MultiTableHuffman/Serial/"
+	make -C "algorithms/MultiTableHuffman/Serial/"
 rle:
-	make -C "Algorithms/RunLengthEncoding/"
+	make -C "algorithms/RunLengthEncoding/"
 clean:
-	rm Bin/*
+	rm bin/*

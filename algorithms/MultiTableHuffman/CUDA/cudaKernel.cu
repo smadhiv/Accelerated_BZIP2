@@ -35,7 +35,7 @@ __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, un
 // single run and no overflow
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //compress
-__global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned int inputFileLength){
+__global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int inputFileLength){
 	unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int upperLimit = d_compressedDataOffset[inputFileLength];
  for(unsigned int i = pos * 8; i < upperLimit; i += blockDim.x * 8){
@@ -95,7 +95,9 @@ __global__ void encode_single_run_with_overflow(unsigned char *d_inputFileData, 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //compress
 __global__ void compress_single_run_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int overFlowBlock, unsigned char *d_byteCompressedData_overflow){
-	for(unsigned int i = pos * 8; i < d_compressedDataOffset[overFlowBlock * BLOCK_SIZE]; i += blockDim.x * 8){
+	unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int upperLimit_1 = d_compressedDataOffset[overFlowBlock * BLOCK_SIZE];
+	for(unsigned int i = pos * 8; i < upperLimit_1; i += blockDim.x * 8){
 		for(unsigned int j = 0; j < 8; j++){
 			if(d_byteCompressedData[i + j] == 0){
 				d_inputFileData[i / 8] = d_inputFileData[i / 8] << 1;
@@ -107,8 +109,8 @@ __global__ void compress_single_run_with_overflow(unsigned char *d_inputFileData
 	}
 	
 	unsigned int offset_overflow = d_compressedDataOffset[overFlowBlock * BLOCK_SIZE] / 8;
-	
-	for(unsigned int i = pos * 8; i < d_compressedDataOffset[inputFileLength]; i += blockDim.x * 8){
+	unsigned int upperLimit_2 = d_compressedDataOffset[d_inputFileLength];
+	for(unsigned int i = pos * 8; i < upperLimit_2; i += blockDim.x * 8){
 		for(unsigned int j = 0; j < 8; j++){
 			if(d_byteCompressedData_overflow[i + j] == 0){
 				d_inputFileData[(i / 8) + offset_overflow] = d_inputFileData[(i / 8) + offset_overflow] << 1;
