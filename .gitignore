@@ -6,7 +6,8 @@
 
 # Misc
 *.txt
-TestFiles/enwik8
+testfiles/enwik8
+testfiles/mb*
 
 # Precompiled Headers
 *.gch
