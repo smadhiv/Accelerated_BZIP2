@@ -9,7 +9,8 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // single run and no overflow
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-__global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int numInputDataBlocks){
+//encode
+__global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int numInputDataBlocks){
 	__shared__ huffmanDictionary_t d_huffmanDictionary_shared;
 
 	unsigned int inputFileLength = d_inputFileLength;
@@ -28,9 +29,16 @@ __global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, 
 		  }
 	  }
   }
+}
 
-	__syncthreads();
- for(unsigned int i = pos * 8; i < d_compressedDataOffset[inputFileLength]; i += blockDim.x * 8){
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// single run and no overflow
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//compress
+__global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned int inputFileLength){
+	unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int upperLimit = d_compressedDataOffset[inputFileLength];
+ for(unsigned int i = pos * 8; i < upperLimit; i += blockDim.x * 8){
 	  for(unsigned int j = 0; j < 8; j++){
 		  if(d_byteCompressedData[i + j] == 0){
 			  d_inputFileData[i / 8] = d_inputFileData[i / 8] << 1;
@@ -46,7 +54,8 @@ __global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // single run with overflow
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-__global__ void compress_single_run_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int numInputDataBlocks, unsigned int overFlowBlock, unsigned char *d_byteCompressedData_overflow){
+//encode
+__global__ void encode_single_run_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int numInputDataBlocks, unsigned int overFlowBlock, unsigned char *d_byteCompressedData_overflow){
 	__shared__ huffmanDictionary_t d_huffmanDictionary_shared;
 
 	unsigned int inputFileLength = d_inputFileLength;
@@ -79,9 +88,13 @@ __global__ void compress_single_run_with_overflow(unsigned char *d_inputFileData
 		  }
 	  }
   }
+}
 
-	__syncthreads();
-	
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+// single run with overflow
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+//compress
+__global__ void compress_single_run_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int overFlowBlock, unsigned char *d_byteCompressedData_overflow){
 	for(unsigned int i = pos * 8; i < d_compressedDataOffset[overFlowBlock * BLOCK_SIZE]; i += blockDim.x * 8){
 		for(unsigned int j = 0; j < 8; j++){
 			if(d_byteCompressedData[i + j] == 0){
