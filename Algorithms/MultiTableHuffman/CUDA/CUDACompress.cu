@@ -155,7 +155,8 @@ int main(int argc, char **argv){
 		if (error!= cudaSuccess)
 			printf("erro_memset: %s\n", cudaGetErrorString(error));
 
-		compress_single_run_no_overflow<<<4, 1024>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks);
+		encode_single_run_no_overflow<<<4, 1024>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks);
+		compress_single_run_no_overflow<<<4, 1024>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength);
 	}
 	else{
 		printf("With Overflow!!\n");
@@ -176,6 +177,7 @@ int main(int argc, char **argv){
 			printf("erro_memset: %s\n", cudaGetErrorString(error));
 
 		compress_single_run_with_overflow<<<4, 1024>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks, integerOverFlowIndex[0] / BLOCK_SIZE, d_byteCompressedData_overflow);
+		compress_single_run_with_overflow<<<4, 1024>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength, integerOverFlowIndex[0] / BLOCK_SIZE, d_byteCompressedData_overflow);
 	}
 
 	cudaError_t error_kernel = cudaGetLastError();
