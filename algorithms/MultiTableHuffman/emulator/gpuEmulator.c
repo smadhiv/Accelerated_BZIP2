@@ -102,34 +102,93 @@ int main(int argc, char **argv){
 		compressedFileLength += (compressedDataOffset[integerOverFlowIndex[i]] / 8);
 	}
 	compressedData = (unsigned char *)malloc(sizeof(unsigned char) * (compressedFileLength));
-	unsigned char *byteCompressedData = (unsigned char *)calloc(compressedDataOffset[inputFileLength], sizeof(unsigned char));
 	printf("compressed block length = %u\n", compressedFileLength);
 
 	// calculate run duration
 	end = clock();
 
-	//encode
-	for(unsigned int i = 0; i < numInputDataBlocks; i++){
-    unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
+	
+	if(numIntegerOverflows == 0){
+		unsigned char *byteCompressedData = (unsigned char *)calloc(compressedDataOffset[inputFileLength], sizeof(unsigned char));
+		//encode
+		for(unsigned int i = 0; i < numInputDataBlocks; i++){
+    	unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
 
-	  for(unsigned int j = (i * BLOCK_SIZE); j < upperLimit; j++){
-		  for(unsigned int k = 0; k < huffmanDictionary[i].bitSequenceLength[inputFileData[j]]; k++){
-			  byteCompressedData[compressedDataOffset[j] + k] = huffmanDictionary[i].bitSequence[inputFileData[j]][k];
-		  }
-	  }
-  }
+	  	for(unsigned int j = (i * BLOCK_SIZE); j < upperLimit; j++){
+		  	for(unsigned int k = 0; k < huffmanDictionary[i].bitSequenceLength[inputFileData[j]]; k++){
+			  	byteCompressedData[compressedDataOffset[j] + k] = huffmanDictionary[i].bitSequence[inputFileData[j]][k];
+		  	}
+	  	}
+  	}
+		//compress
+		unsigned int upperLimit = compressedDataOffset[inputFileLength];
+ 		for(unsigned int i = 0; i < upperLimit; i += 8){
+	  	for(unsigned int j = 0; j < 8; j++){
+		  	if(byteCompressedData[i + j] == 0){
+			  	compressedData[i / 8] = compressedData[i / 8] << 1;
+		  	}
+		  	else{
+			  	compressedData[i / 8] = (compressedData[i / 8] << 1) | 1;
+		  	}
+	  	}
+  	}
+	}
+	
+	//integer overflow
+	else{
+		unsigned int overFlowBlock = integerOverFlowIndex[0] / BLOCK_SIZE;
+		unsigned char *byteCompressedData = calloc(compressedDataOffset[integerOverFlowIndex[0]], sizeof(unsigned char));
+		unsigned char *byteCompressedData_overflow = calloc(compressedDataOffset[inputFileLength], sizeof(unsigned char));
 
-	unsigned int upperLimit = compressedDataOffset[inputFileLength];
- for(unsigned int i = 0; i < upperLimit; i += 8){
-	  for(unsigned int j = 0; j < 8; j++){
-		  if(byteCompressedData[i + j] == 0){
-			  compressedData[i / 8] = compressedData[i / 8] << 1;
-		  }
-		  else{
-			  compressedData[i / 8] = (compressedData[i / 8] << 1) | 1;
-		  }
-	  }
-  }
+		for(unsigned int i = 0; i < overFlowBlock; i++){
+
+			//encode
+    	unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
+
+	  	for(unsigned int j = (i * BLOCK_SIZE); j < upperLimit; j++){
+		  	for(unsigned int k = 0; k < huffmanDictionary[i].bitSequenceLength[inputFileData[j]]; k++){
+			  	byteCompressedData[compressedDataOffset[j] + k] = huffmanDictionary[i].bitSequence[inputFileData[j]][k];
+		  	}
+	  	}
+  	}
+
+		for(unsigned int i = overFlowBlock; i < numInputDataBlocks; i++){
+    	unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
+
+	  	for(unsigned int j = (i * BLOCK_SIZE); j < upperLimit; j++){
+		  	for(unsigned int k = 0; k < huffmanDictionary[i].bitSequenceLength[inputFileData[j]]; k++){
+			  	byteCompressedData_overflow[compressedDataOffset[j] + k] = huffmanDictionary[i].bitSequence[inputFileData[j]][k];
+		  	}
+	  	}
+  	}
+
+		//compress
+		unsigned int upperLimit_1 = compressedDataOffset[overFlowBlock * BLOCK_SIZE];
+		for(unsigned int i = 0; i < upperLimit_1; i += 8){
+			for(unsigned int j = 0; j < 8; j++){
+				if(byteCompressedData[i + j] == 0){
+					compressedData[i / 8] = compressedData[i / 8] << 1;
+				}
+				else{
+					compressedData[i / 8] = (compressedData[i / 8] << 1) | 1;
+				}
+			}
+		}
+	
+		unsigned int offset_overflow = compressedDataOffset[overFlowBlock * BLOCK_SIZE] / 8;
+		unsigned int upperLimit_2 = compressedDataOffset[inputFileLength];
+		for(unsigned int i = 0; i < upperLimit_2; i += 8){
+			for(unsigned int j = 0; j < 8; j++){
+				if(byteCompressedData_overflow[i + j] == 0){
+					compressedData[(i / 8) + offset_overflow] = compressedData[(i / 8) + offset_overflow] << 1;
+				}
+				else{
+					compressedData[(i / 8) + offset_overflow] = (compressedData[(i / 8) + offset_overflow] << 1) | 1;
+				}
+			}
+		}
+	}
+
 
 
 	// write src inputFileLength, header and compressed data to output file
