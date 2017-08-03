@@ -14,5 +14,7 @@ huffman:
 	make -C "algorithms/MultiTableHuffman/Serial/"
 rle:
 	make -C "algorithms/RunLengthEncoding/"
+emulator:
+	make -C "algorithms/MultiTableHuffman/emulator/"
 clean:
 	rm bin/*
