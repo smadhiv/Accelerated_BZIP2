@@ -173,10 +173,10 @@ void create_data_offset_array(int index, unsigned int *compressedDataOffset, uns
 	unsigned int i = 0;
 	while(i < inputBlockLength){
 		dataOffsetIndex[i + 1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[i]] + dataOffsetIndex[i];
-		if (dataOffsetIndex[i + 1] < dataOffsetIndex[i]){
+		if (dataOffsetIndex[i + 1] + 6 * 1024 < dataOffsetIndex[i]){
 			integerOverFlowBlockIndex[(*numIntegerOverflows)] = index;
 			(*numIntegerOverflows)++;
-			dataOffsetIndex[1] = 0;
+			dataOffsetIndex[1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[0]];
 			i = 0;
 		}
 		i++;

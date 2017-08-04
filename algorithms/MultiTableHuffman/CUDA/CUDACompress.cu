@@ -104,8 +104,6 @@ int main(int argc, char **argv){
 		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[currentBlockIndex]);
 		create_data_offset_array((inputBlockPointer - inputFileData - inputBlockLength), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[currentBlockIndex], integerOverFlowIndex, &numIntegerOverflows);
 		inputBlocksIndex[currentBlockIndex + 1] = compressedDataOffset[inputBlockPointer - inputFileData];
-		printf("%u=%u?\n", compressedDataOffset[inputFileLength], compressedDataOffset[inputBlockPointer - inputFileData]);
-		// may need to add +1 above on rhs
 		currentBlockIndex++;
 	}
 	

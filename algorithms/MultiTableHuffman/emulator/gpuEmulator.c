@@ -55,6 +55,7 @@ int main(int argc, char **argv){
 	unsigned int *inputBlocksIndex = (unsigned int *)malloc((numInputDataBlocks + 1) * sizeof(unsigned int));
 	inputBlocksIndex[0] = 0;
 
+	unsigned int flag = 0;
 	//process input file
 	unsigned char *inputBlockPointer = inputFileData;
 	unsigned int processLength = inputFileLength;
@@ -92,14 +93,20 @@ int main(int argc, char **argv){
 		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[currentBlockIndex]);
 		create_data_offset_array((inputBlockPointer - inputFileData - inputBlockLength), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[currentBlockIndex], integerOverFlowIndex, &numIntegerOverflows);
 		inputBlocksIndex[currentBlockIndex + 1] = compressedDataOffset[inputBlockPointer - inputFileData];
-		printf("%u=%u?\n", compressedDataOffset[inputFileLength], compressedDataOffset[inputBlockPointer - inputFileData]);
-		// may need to add +1 above on rhs
+		
+		if(numIntegerOverflows == 1 && flag == 0){
+			flag = 1;
+			printf("before overflow %u\n", inputBlocksIndex[currentBlockIndex]);
+			printf("after overflow %u\n", inputBlocksIndex[currentBlockIndex + 1]);
+			printf("this should be before %u\n", integerOverFlowIndex[0]);
+		}
 		currentBlockIndex++;
 	}
 	
 	unsigned int compressedFileLength = compressedDataOffset[inputFileLength] / 8;
 	for(unsigned int i = 0; i < numIntegerOverflows; i++){
 		compressedFileLength += (compressedDataOffset[integerOverFlowIndex[i]] / 8);
+		printf("before overflow %u\n", compressedDataOffset[integerOverFlowIndex[i]]);
 	}
 	compressedData = (unsigned char *)malloc(sizeof(unsigned char) * (compressedFileLength));
 	printf("compressed block length = %u\n", compressedFileLength);
@@ -109,6 +116,7 @@ int main(int argc, char **argv){
 
 	
 	if(numIntegerOverflows == 0){
+		printf("No integer overflow!!\n");
 		unsigned char *byteCompressedData = (unsigned char *)calloc(compressedDataOffset[inputFileLength], sizeof(unsigned char));
 		//encode
 		for(unsigned int i = 0; i < numInputDataBlocks; i++){
@@ -136,6 +144,7 @@ int main(int argc, char **argv){
 	
 	//integer overflow
 	else{
+		printf("Integer overflow!!\n");
 		unsigned int overFlowBlock = integerOverFlowIndex[0] / BLOCK_SIZE;
 		unsigned char *byteCompressedData = calloc(compressedDataOffset[integerOverFlowIndex[0]], sizeof(unsigned char));
 		unsigned char *byteCompressedData_overflow = calloc(compressedDataOffset[inputFileLength], sizeof(unsigned char));
@@ -153,15 +162,22 @@ int main(int argc, char **argv){
   	}
 
 		for(unsigned int i = overFlowBlock; i < numInputDataBlocks; i++){
+			printf("im here \n");
     	unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
-
 	  	for(unsigned int j = (i * BLOCK_SIZE); j < upperLimit; j++){
+				if(i == overFlowBlock && j == (i * BLOCK_SIZE)){
+		  		for(unsigned int k = 0; k < huffmanDictionary[i].bitSequenceLength[inputFileData[j]]; k++){
+			  		byteCompressedData_overflow[k] = huffmanDictionary[i].bitSequence[inputFileData[j]][k];
+		  		}					
+					continue;
+				}
 		  	for(unsigned int k = 0; k < huffmanDictionary[i].bitSequenceLength[inputFileData[j]]; k++){
 			  	byteCompressedData_overflow[compressedDataOffset[j] + k] = huffmanDictionary[i].bitSequence[inputFileData[j]][k];
 		  	}
 	  	}
   	}
-
+		printf("encode done\n");
+		//return 0;
 		//compress
 		unsigned int upperLimit_1 = compressedDataOffset[overFlowBlock * BLOCK_SIZE];
 		for(unsigned int i = 0; i < upperLimit_1; i += 8){
@@ -174,7 +190,8 @@ int main(int argc, char **argv){
 				}
 			}
 		}
-	
+		printf("compress part 1 done\n");
+		
 		unsigned int offset_overflow = compressedDataOffset[overFlowBlock * BLOCK_SIZE] / 8;
 		unsigned int upperLimit_2 = compressedDataOffset[inputFileLength];
 		for(unsigned int i = 0; i < upperLimit_2; i += 8){
@@ -187,9 +204,8 @@ int main(int argc, char **argv){
 				}
 			}
 		}
+		printf("compress done\n");
 	}
-
-
 
 	// write src inputFileLength, header and compressed data to output file
 	compressedFile = fopen(argv[2], "wb");
