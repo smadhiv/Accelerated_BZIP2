@@ -16,7 +16,7 @@ __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, un
 	unsigned int inputFileLength = d_inputFileLength;
 	unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
   
-	for(unsigned int i = blockIdx.x; i < numInputDataBlocks; i += blockDim.x){
+	for(unsigned int i = blockIdx.x; i < numInputDataBlocks; i += gridDim.x){
     
 		//copy the specific dictionary to the shared memory
   	memcpy(&d_huffmanDictionary_shared, &d_huffmanDictionary[i], sizeof(huffmanDictionary_t));
