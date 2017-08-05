@@ -49,7 +49,7 @@ int main(int argc, char **argv){
 	printf("Number of blocks : %u\n", numInputDataBlocks);
 
 	//compute minimum memory req. get GPU memory
-	long unsigned int gpuMemoryRequired = 5 * inputFileLength * sizeof(unsigned char) + numInputDataBlocks * sizeof(huffmanDictionary_t) + (int)((float)inputFileLength/10) + 10 * 1024 * 1024;
+	long unsigned int gpuMemoryRequired = 5 * inputFileLength * sizeof(unsigned char) + numInputDataBlocks * sizeof(huffmanDictionary_t) + MIN_SCRATCH_SIZE;
 	long unsigned int mem_free, mem_total;
 	cudaMemGetInfo(&mem_free, &mem_total);
 	if(mem_free < gpuMemoryRequired){
@@ -174,8 +174,8 @@ int main(int argc, char **argv){
 		if (error!= cudaSuccess)
 			printf("erro_memset: %s\n", cudaGetErrorString(error));
 
-		encode_single_run_with_overflow<<<4, 1024>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks, integerOverFlowIndex[0] / BLOCK_SIZE, d_byteCompressedData_overflow);
-		compress_single_run_with_overflow<<<4, 1024>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength, integerOverFlowIndex[0] / BLOCK_SIZE, d_byteCompressedData_overflow);
+		encode_single_run_with_overflow<<<1, 1024>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks, integerOverFlowIndex[0] / BLOCK_SIZE, d_byteCompressedData_overflow);
+		compress_single_run_with_overflow<<<1, 1024>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength, integerOverFlowIndex[0] / BLOCK_SIZE, d_byteCompressedData_overflow);
 	}
 
 	cudaError_t error_kernel = cudaGetLastError();
