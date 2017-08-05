@@ -14,13 +14,16 @@ __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, un
 	__shared__ huffmanDictionary_t d_huffmanDictionary_shared;
 
 	unsigned int inputFileLength = d_inputFileLength;
-	unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int pos = threadIdx.x;
   
 	for(unsigned int i = blockIdx.x; i < numInputDataBlocks; i += gridDim.x){
     
 		//copy the specific dictionary to the shared memory
-  	memcpy(&d_huffmanDictionary_shared, &d_huffmanDictionary[i], sizeof(huffmanDictionary_t));
+	if(threadIdx.x == 0){
+       	  memcpy(&d_huffmanDictionary_shared, &d_huffmanDictionary[i], sizeof(huffmanDictionary_t));
+        }
 
+        __syncthreads();
     unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
 
 	  for(unsigned int j = (i * BLOCK_SIZE) + pos; j < upperLimit; j += blockDim.x){
@@ -38,7 +41,7 @@ __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, un
 __global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int inputFileLength){
 	unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int upperLimit = d_compressedDataOffset[inputFileLength];
- for(unsigned int i = pos * 8; i < upperLimit; i += blockDim.x * 8){
+ for(unsigned int i = pos * 8; i < upperLimit; i += (blockDim.x * gridDim.x) * 8){
 	  for(unsigned int j = 0; j < 8; j++){
 		  if(d_byteCompressedData[i + j] == 0){
 			  d_inputFileData[i / 8] = d_inputFileData[i / 8] << 1;
