@@ -28,8 +28,9 @@ __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, un
 			  d_byteCompressedData[d_compressedDataOffset[j] + k] = d_huffmanDictionary_shared.bitSequence[d_inputFileData[j]][k];
 		  }
 	  }
+		__syncthreads();
   }
-	__syncthreads();
+
 
 	pos = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int upperLimit = d_compressedDataOffset[inputFileLength];
