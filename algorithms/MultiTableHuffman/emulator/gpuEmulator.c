@@ -102,6 +102,10 @@ int main(int argc, char **argv){
 		}
 		currentBlockIndex++;
 	}
+
+	FILE *out = fopen("sriram_emulator", "wb");
+	fwrite(compressedDataOffset, sizeof(unsigned int),inputFileLength + 1, out);
+	fclose(out);
 	
 	unsigned int compressedFileLength = compressedDataOffset[inputFileLength] / 8;
 	for(unsigned int i = 0; i < numIntegerOverflows; i++){

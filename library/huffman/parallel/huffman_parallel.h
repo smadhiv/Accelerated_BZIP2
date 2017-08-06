@@ -21,7 +21,7 @@
 #endif
 
 #ifndef GRID_DIM
-#define GRID_DIM 1
+#define GRID_DIM 4
 #endif
 //dictionary struct that holds the sequence and its length
 typedef struct {
