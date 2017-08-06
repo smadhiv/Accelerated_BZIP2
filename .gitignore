@@ -8,6 +8,7 @@
 *.txt
 testfiles/enwik8
 testfiles/mb*
+testfiles/TestFiles
 HuffmanCoding_MPI_CUDA
 
 # Precompiled Headers

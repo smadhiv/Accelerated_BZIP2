@@ -4,6 +4,7 @@ all:
 	make -C "algorithms/MultiTableHuffman/CUDA/"
 	make -C "algorithms/MultiTableHuffman/Serial/"
 	make -C "algorithms/RunLengthEncoding/"
+	make -C "algorithms/MultiTableHuffman/emulator/"
 bwt:
 	make -C "algorithms/BurrowsWheelerTransform/"
 mtf:
