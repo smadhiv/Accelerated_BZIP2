@@ -20,6 +20,7 @@ __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, un
 		if(threadIdx.x == 0){
     	memcpy(&d_huffmanDictionary_shared, &d_huffmanDictionary[i], sizeof(huffmanDictionary_t));
   	}
+		__syncthreads();
     unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
 		//copy the input char's encoded bytes into d_byteCompressedData
 	  for(unsigned int j = (i * BLOCK_SIZE) + pos; j < upperLimit; j += blockDim.x){
@@ -64,6 +65,7 @@ __global__ void encode_single_run_with_overflow(unsigned char *d_inputFileData, 
 		if(threadIdx.x == 0){
     	memcpy(&d_huffmanDictionary_shared, &d_huffmanDictionary[i], sizeof(huffmanDictionary_t));
   	}
+		__syncthreads();
     unsigned int upperLimit = i * BLOCK_SIZE + BLOCK_SIZE;
 	  for(unsigned int j = (i * BLOCK_SIZE) + pos; j < upperLimit; j += blockDim.x){
 		  for(unsigned int k = 0; k < d_huffmanDictionary_shared.bitSequenceLength[d_inputFileData[j]]; k++){
@@ -78,6 +80,7 @@ __global__ void encode_single_run_with_overflow(unsigned char *d_inputFileData, 
 		if(threadIdx.x == 0){
     	memcpy(&d_huffmanDictionary_shared, &d_huffmanDictionary[i], sizeof(huffmanDictionary_t));
   	}
+		__syncthreads();
     unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
 	  for(unsigned int j = (i * BLOCK_SIZE) + pos; j < upperLimit; j += blockDim.x){
 				if(i == overFlowBlock && j == (i * BLOCK_SIZE)){
