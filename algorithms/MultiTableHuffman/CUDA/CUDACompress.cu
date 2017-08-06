@@ -155,7 +155,7 @@ int main(int argc, char **argv){
 
 		encode_single_run_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks);
 		cudaDeviceSynchronize();
-		compress_single_run_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength);
+		//compress_single_run_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength);
 	}
 	else{
 		printf("With Overflow!!\n");
