@@ -30,12 +30,26 @@ __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, un
 	  }
   }
 	__syncthreads();
+
+	pos = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int upperLimit = d_compressedDataOffset[inputFileLength];
+ 	for(unsigned int i = pos * 8; i < upperLimit; i += (blockDim.x * gridDim.x) * 8){
+	  for(unsigned int j = 0; j < 8; j++){
+		  if(d_byteCompressedData[i + j] == 0){
+			  d_inputFileData[i / 8] = d_inputFileData[i / 8] << 1;
+		  }
+		  else{
+			  d_inputFileData[i / 8] = (d_inputFileData[i / 8] << 1) | 1;
+		  }
+	  }
+  }
 }
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // single run and no overflow
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //compress
+/*
 __global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int inputFileLength){
 	unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int upperLimit = d_compressedDataOffset[inputFileLength];
@@ -50,7 +64,7 @@ __global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, 
 	  }
   }
 }
-
+*/
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 // single run with overflow
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
