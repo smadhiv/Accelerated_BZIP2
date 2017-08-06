@@ -16,6 +16,13 @@
 #define BLOCK_SIZE 900000
 #endif
 
+#ifndef BLOCK_DIM
+#define BLOCK_DIM 1024
+#endif
+
+#ifndef GRID_DIM
+#define GRID_DIM 1
+#endif
 //dictionary struct that holds the sequence and its length
 typedef struct {
 	unsigned char bitSequence[256][191];
