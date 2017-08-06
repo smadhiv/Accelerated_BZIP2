@@ -81,8 +81,8 @@ __global__ void encode_single_run_with_overflow(unsigned char *d_inputFileData, 
     unsigned int upperLimit = i < numInputDataBlocks - 1 ? i * BLOCK_SIZE + BLOCK_SIZE : inputFileLength;
 	  for(unsigned int j = (i * BLOCK_SIZE) + pos; j < upperLimit; j += blockDim.x){
 				if(i == overFlowBlock && j == (i * BLOCK_SIZE)){
-		  		for(unsigned int k = 0; k < huffmanDictionary[i].bitSequenceLength[inputFileData[j]]; k++){
-			  		byteCompressedData_overflow[k] = huffmanDictionary[i].bitSequence[inputFileData[j]][k];
+		  		for(unsigned int k = 0; k < d_huffmanDictionary_shared.bitSequenceLength[inputFileData[j]]; k++){
+			  		d_byteCompressedData_overflow[k] = d_huffmanDictionary_shared.bitSequence[inputFileData[j]][k];
 		  		}				
 					continue;
 				}
