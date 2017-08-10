@@ -54,11 +54,11 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 unsigned int compute_mem_offset(unsigned int *frequency, huffmanDictionary_t *huffmanDictionary);
-void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowBlockIndex, unsigned int *numIntegerOverflows, unsigned int *kernelOverFlowBlockIndex, unsigned int *numKernelRuns, long unsigned int *mem_used, long unsigned int mem_avail);
+void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowBlockIndex, unsigned int *numIntegerOverflows, unsigned int *kernelOverFlowIndex, unsigned int *numKernelRuns, long unsigned int *mem_used, long unsigned int mem_avail);
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-int build_compressed_data_offset(unsigned int *compressedDataOffset, unsigned int *inputBlocksIndex, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, unsigned char *inputBlockData, unsigned int inputFileLength, unsigned char *inputFileData, unsigned int *numIntegerOverflows,  unsigned int *integerOverFlowIndex, unsigned int *numKernelRuns,  unsigned int *kernelOverFlowBlockIndex, long unsigned int mem_avail);
+int build_compressed_data_offset(unsigned int *compressedDataOffset, unsigned int *inputBlocksIndex, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, unsigned char *inputBlockData, unsigned int inputFileLength, unsigned char *inputFileData, unsigned int *numIntegerOverflows,  unsigned int *integerOverFlowIndex, unsigned int *numKernelRuns,  unsigned int *kernelOverFlowIndex, long unsigned int mem_avail);
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/

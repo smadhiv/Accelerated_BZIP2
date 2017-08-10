@@ -6,10 +6,6 @@
 #include "../../../library/huffman/parallel/huffman_parallel.h"
 #endif
 
-//global variables to be used in qsort function
-//extern unsigned int inputBlockLength;
-//store input block data
-//remove this for cudabzip2
 unsigned char inputBlockData[BLOCK_SIZE];
 
 int main(int argc, char **argv){
@@ -55,7 +51,7 @@ int main(int argc, char **argv){
 	long unsigned int gpuMemoryRequired = 5 * inputFileLength * sizeof(unsigned char) + numInputDataBlocks * sizeof(huffmanDictionary_t) + MIN_SCRATCH_SIZE;
 	long unsigned int mem_free, mem_total;
 	cudaMemGetInfo(&mem_free, &mem_total);
-	if(mem_free < gpuMemoryRequired){
+	if(mem_free <= gpuMemoryRequired){
 		printf("Insufficient GPU memory\n");
 		return -1;
 	}
@@ -88,9 +84,9 @@ int main(int argc, char **argv){
 		return -1;
 	}
 	else{
-		FILE *out = fopen("sriram_gpu", "wb");
-		fwrite(compressedDataOffset, sizeof(unsigned int),inputFileLength + 1, out);
-		fclose(out);
+		//FILE *out = fopen("sriram_gpu", "wb");
+		//fwrite(compressedDataOffset, sizeof(unsigned int),inputFileLength + 1, out);
+		//fclose(out);
 	}	
 
 	//index of each compressed block
