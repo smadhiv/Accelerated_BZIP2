@@ -165,19 +165,27 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
-//create offset array to write bit sequence 
-void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowBlockIndex, unsigned int *numIntegerOverflows){
+//create offset array to write bit sequence
+void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowBlockIndex, unsigned int *numIntegerOverflows, unsigned int *kernelOverFlowBlockIndex, unsigned int *numKernelRuns, long unsigned int *mem_used, long unsigned int mem_avail){
 	
 	compressedDataOffset[0] = 0;
 	unsigned int *dataOffsetIndex = compressedDataOffset + index;
 	unsigned int i = 0;
 	while(i < inputBlockLength){
 		dataOffsetIndex[i + 1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[i]] + dataOffsetIndex[i];
-		if (dataOffsetIndex[i + 1] + 6 * 1024 < dataOffsetIndex[i]){
+		if((*mem_used) + dataOffsetIndex[i + 1] > mem_avail){
+			kernelOverFlowBlockIndex[(*numKernelRuns)] = index;
+			(*numKernelRuns)++;
+			dataOffsetIndex[1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[0]];
+			i = 0;
+			*mem_used = 0;
+		}
+		else if (dataOffsetIndex[i + 1] + 16 * 1024 < dataOffsetIndex[i]){
 			integerOverFlowBlockIndex[(*numIntegerOverflows)] = index;
 			(*numIntegerOverflows)++;
 			dataOffsetIndex[1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[0]];
 			i = 0;
+			*mem_used = dataOffsetIndex[0];
 		}
 		i++;
 	}
@@ -187,3 +195,455 @@ void create_data_offset_array(int index, unsigned int *compressedDataOffset, uns
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
+int build_compressed_data_offset(unsigned int *compressedDataOffset, unsigned int *inputBlocksIndex, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, unsigned char *inputBlockData, unsigned int inputFileLength, unsigned char *inputFileData, unsigned int *numIntegerOverflows,  unsigned int *integerOverFlowIndex, unsigned int *numKernelRuns,  unsigned int *kernelOverFlowBlockIndex, long unsigned int mem_avail){
+//process input file
+	unsigned int currentBlockIndex = 0;
+	long unsigned int mem_used = 0;
+	unsigned char *inputBlockPointer = inputFileData;
+	unsigned int processLength = inputFileLength;
+  while(processLength != 0){
+  	unsigned int inputBlockLength = processLength > BLOCK_SIZE ? BLOCK_SIZE : processLength;
+	  processLength -= inputBlockLength;
+
+	  //copy input data to global memory
+	  memcpy(inputBlockData, inputBlockPointer, inputBlockLength);
+		inputBlockPointer += inputBlockLength;
+
+		//initialize frequency and find freq. of each symbol
+		intitialize_frequency(frequency[currentBlockIndex], inputBlockLength, inputBlockData);
+
+		// initialize nodes of huffman tree
+		huffmanTree_t huffmanTreeNode[512];
+		unsigned int distinctCharacterCount = intitialize_huffman_tree_get_distinct_char_count(frequency[currentBlockIndex], huffmanTreeNode);
+	
+		// build tree 
+		huffmanTree_t *head_huffmanTreeNode = NULL;
+		for (unsigned int i = 0; i < distinctCharacterCount - 1; i++){
+			unsigned int combinedHuffmanNodes = 2 * i;
+			sort_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode);
+			build_huffman_tree(i, distinctCharacterCount, combinedHuffmanNodes, huffmanTreeNode, &head_huffmanTreeNode);
+		}
+		if(distinctCharacterCount == 1){
+			head_huffmanTreeNode = &huffmanTreeNode[0];
+		}
+
+		// build table having the bitSequence sequence and its length
+		unsigned char bitSequence[255], bitSequenceLength = 0;
+		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[currentBlockIndex]);
+		create_data_offset_array((inputBlockPointer - inputFileData - inputBlockLength), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[currentBlockIndex], integerOverFlowIndex, numIntegerOverflows, kernelOverFlowBlockIndex, numKernelRuns, &mem_used, mem_avail);
+		inputBlocksIndex[currentBlockIndex + 1] = compressedDataOffset[inputBlockPointer - inputFileData];
+		currentBlockIndex++;
+		if(numKernelRuns < numIntegerOverflows){
+			return -1;
+		}
+	}
+	return 0;
+}
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void cuda_compress_single_run_no_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength){
+	printf("No Overflow and single run!!\n");
+
+	//gpu memory allocation
+	unsigned char *d_inputFileData, *d_byteCompressedData;
+	unsigned int *d_compressedDataOffset;
+	huffmanDictionary_t *d_huffmanDictionary;
+	cudaError_t error;
+
+	//compressed data
+	unsigned int compressedFileLength = compressedDataOffset[inputFileLength] / 8;
+	unsigned char *compressedData = (unsigned char *)malloc(compressedFileLength * sizeof(unsigned char));
+
+	// allocate memory for input data, offset information and dictionary
+	unsigned int gpuInputDataAllocationLength = inputFileLength > compressedFileLength ? inputFileLength : compressedFileLength;
+	error = cudaMalloc((void **)&d_inputFileData, gpuInputDataAllocationLength * sizeof(unsigned char));
+	if (error != cudaSuccess)
+		printf("erro_input_data: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int));
+	if (error != cudaSuccess)
+		printf("erro_data_offset: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_byteCompressedData, (compressedDataOffset[inputFileLength]) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t));
+	if (error != cudaSuccess)
+		printf("erro_dictionary: %s\n", cudaGetErrorString(error));
+
+	// memory copy input data, offset information and dictionary
+	error = cudaMemcpy(d_inputFileData, inputFileData, inputFileLength * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_input_data_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_compressedDataOffset, compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_data_offset_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemset(d_byteCompressedData, 0, compressedDataOffset[inputFileLength] * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_memset: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_huffmanDictionary, huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_dictionary_mem: %s\n", cudaGetErrorString(error));
+
+	//call kernel
+	encode_single_run_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks);
+	compress_single_run_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength);
+	cudaError_t error_kernel = cudaGetLastError();
+	if (error_kernel != cudaSuccess)
+		printf("erro_kernel: %s\n", cudaGetErrorString(error_kernel));
+
+	// copy compressed data from GPU to CPU memory
+	error = cudaMemcpy(compressedData, d_inputFileData, compressedFileLength * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+	if (error != cudaSuccess)
+		printf("erro_copy_compressed_data: %s\n", cudaGetErrorString(error));
+
+	//write to output file
+	FILE *outputFile = fopen(outputFileName, "wb");
+	unsigned char *putputDataPtr = compressedData;
+	for(unsigned int i = 0; i < numInputDataBlocks; i++){
+
+		//i/o lengths
+		unsigned int compressedBlockLength = arrayCompressedBlocksLength[i];
+		unsigned int inputBlockLength = i != numInputDataBlocks - 1 ? BLOCK_SIZE : (inputFileLength % BLOCK_SIZE != 0 ? inputFileLength % BLOCK_SIZE : BLOCK_SIZE);
+
+		//writes
+		fwrite(&arrayCompressedBlocksLength[i], sizeof(unsigned int), 1, outputFile);
+		fwrite(&inputBlockLength, sizeof(unsigned int), 1, outputFile);
+		fwrite(frequency[i], sizeof(unsigned int), 256, outputFile);
+		fwrite(putputDataPtr, sizeof(unsigned char), compressedBlockLength, outputFile);
+		putputDataPtr += compressedBlockLength;
+	}
+
+	// free allocated memory
+	free(outputFile);
+	cudaFree(d_inputFileData);
+	cudaFree(d_compressedDataOffset);
+	cudaFree(d_huffmanDictionary);
+	cudaFree(d_byteCompressedData);
+	fclose(outputFile);
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void cuda_compress_single_run_with_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength, unsigned int integerOverFlowIndex){
+	printf("No Overflow and single run!!\n");
+
+	//gpu memory allocation
+	unsigned char *d_inputFileData;
+	unsigned char *d_byteCompressedData_overflow, *d_byteCompressedData;
+	unsigned int *d_compressedDataOffset;
+	huffmanDictionary_t *d_huffmanDictionary;
+	cudaError_t error;
+
+	//compressed data
+	unsigned int compressedFileLength = (compressedDataOffset[integerOverFlowIndex] / 8) + (compressedDataOffset[inputFileLength] / 8);
+	unsigned char *compressedData = (unsigned char *)malloc(compressedFileLength * sizeof(unsigned char));
+
+	// allocate memory for input data, offset information and dictionary
+	unsigned int gpuInputDataAllocationLength = inputFileLength > compressedFileLength ? inputFileLength : compressedFileLength;
+	error = cudaMalloc((void **)&d_inputFileData, gpuInputDataAllocationLength * sizeof(unsigned char));
+	if (error != cudaSuccess)
+		printf("erro_input_data: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int));
+	if (error != cudaSuccess)
+		printf("erro_data_offset: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_byteCompressedData, (compressedDataOffset[integerOverFlowIndex]) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_byteCompressedData_overflow, (compressedDataOffset[inputFileLength]) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t));
+	if (error != cudaSuccess)
+		printf("erro_dictionary: %s\n", cudaGetErrorString(error));
+
+	// memory copy input data, offset information and dictionary
+	error = cudaMemcpy(d_inputFileData, inputFileData, inputFileLength * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_input_data_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_compressedDataOffset, compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_data_offset_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemset(d_byteCompressedData, 0, compressedDataOffset[integerOverFlowIndex] * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_memset: %s\n", cudaGetErrorString(error));
+	error = cudaMemset(d_byteCompressedData_overflow, 0, compressedDataOffset[inputFileLength] * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_memset: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_huffmanDictionary, huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_dictionary_mem: %s\n", cudaGetErrorString(error));
+
+	//call kernel
+	encode_single_run_with_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks, integerOverFlowIndex / BLOCK_SIZE, d_byteCompressedData_overflow);
+	compress_single_run_with_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, inputFileLength, integerOverFlowIndex / BLOCK_SIZE, d_byteCompressedData_overflow);
+	cudaError_t error_kernel = cudaGetLastError();
+	if (error_kernel != cudaSuccess)
+		printf("erro_kernel: %s\n", cudaGetErrorString(error_kernel));
+
+		// copy compressed data from GPU to CPU memory
+		error = cudaMemcpy(compressedData, d_inputFileData, compressedFileLength * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+		if (error != cudaSuccess)
+			printf("erro_copy_compressed_data: %s\n", cudaGetErrorString(error));
+
+	//write to output file
+	FILE *outputFile = fopen(outputFileName, "wb");
+	unsigned char *putputDataPtr = compressedData;
+	for(unsigned int i = 0; i < numInputDataBlocks; i++){
+
+		//i/o lengths
+		unsigned int compressedBlockLength = arrayCompressedBlocksLength[i];
+		unsigned int inputBlockLength = i != numInputDataBlocks - 1 ? BLOCK_SIZE : (inputFileLength % BLOCK_SIZE != 0 ? inputFileLength % BLOCK_SIZE : BLOCK_SIZE);
+
+		//writes
+		fwrite(&arrayCompressedBlocksLength[i], sizeof(unsigned int), 1, outputFile);
+		fwrite(&inputBlockLength, sizeof(unsigned int), 1, outputFile);
+		fwrite(frequency[i], sizeof(unsigned int), 256, outputFile);
+		fwrite(putputDataPtr, sizeof(unsigned char), compressedBlockLength, outputFile);
+		putputDataPtr += compressedBlockLength;
+	}
+
+	// free allocated memory
+	fclose(outputFile);
+	free(compressedData);
+	cudaFree(d_inputFileData);
+	cudaFree(d_compressedDataOffset);
+	cudaFree(d_byteCompressedData);
+	cudaFree(d_byteCompressedData_overflow);
+	cudaFree(d_huffmanDictionary);
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void cuda_compress_multiple_run_no_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength, unsigned int numKernelRuns, unsigned int *gpuOverFlowIndex){
+	printf("No Overflow and multiple run!!\n");
+
+	//gpu memory allocation
+	unsigned char *d_inputFileData, *d_byteCompressedData;
+	unsigned int *d_compressedDataOffset;
+	huffmanDictionary_t *d_huffmanDictionary;
+	cudaError_t error;
+
+	//compressed data
+	unsigned int compressedFileLength = compressedDataOffset[inputFileLength] / 8;
+	unsigned int maxByteStreamLength = compressedDataOffset[inputFileLength];
+	for(unsigned int i = 0; i < numKernelRuns; i++){
+		maxByteStreamLength = maxByteStreamLength > compressedDataOffset[gpuOverFlowIndex[i]] ? maxByteStreamLength : compressedDataOffset[gpuOverFlowIndex[i]];
+		compressedFileLength += compressedDataOffset[gpuOverFlowIndex[i]] / 8;
+	}
+	unsigned char *compressedData = (unsigned char *)malloc(compressedFileLength * sizeof(unsigned char));
+
+	// allocate memory for input data, offset information and dictionary
+	unsigned int gpuInputDataAllocationLength = inputFileLength > compressedFileLength ? inputFileLength : compressedFileLength;
+	error = cudaMalloc((void **)&d_inputFileData, gpuInputDataAllocationLength * sizeof(unsigned char));
+	if (error != cudaSuccess)
+		printf("erro_input_data: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int));
+	if (error != cudaSuccess)
+		printf("erro_data_offset: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_byteCompressedData, (maxByteStreamLength) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t));
+	if (error != cudaSuccess)
+		printf("erro_dictionary: %s\n", cudaGetErrorString(error));
+
+	// memory copy input data, offset information and dictionary
+	error = cudaMemcpy(d_inputFileData, inputFileData, inputFileLength * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_input_data_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_compressedDataOffset, compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_data_offset_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_huffmanDictionary, huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_dictionary_mem: %s\n", cudaGetErrorString(error));
+
+	//call kernel
+	unsigned int writePosition = 0;
+	for(int i = 0; i < numKernelRuns; i++){
+		//memset
+		error = cudaMemset(d_byteCompressedData, 0, maxByteStreamLength * sizeof(unsigned char));
+		if (error!= cudaSuccess)
+			printf("erro_memset: %s\n", cudaGetErrorString(error));
+
+		//launch
+		encode_multiple_runs_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks, gpuOverFlowIndex[i] / BLOCK_SIZE, gpuOverFlowIndex[i + 1] / BLOCK_SIZE, inputFileLength);
+		compress_multiple_runs_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, gpuOverFlowIndex[i + 1], writePosition);
+		cudaError_t error_kernel = cudaGetLastError();
+		if (error_kernel != cudaSuccess)
+			printf("erro_kernel: %s\n", cudaGetErrorString(error_kernel));
+
+		//write position
+		writePosition += compressedDataOffset[gpuOverFlowIndex[i]] / 8;
+	}
+
+	// copy compressed data from GPU to CPU memory
+	error = cudaMemcpy(compressedData, d_inputFileData, compressedFileLength * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+	if (error != cudaSuccess)
+		printf("erro_copy_compressed_data: %s\n", cudaGetErrorString(error));
+
+	//write to output file
+	FILE *outputFile = fopen(outputFileName, "wb");
+	unsigned char *putputDataPtr = compressedData;
+	for(unsigned int i = 0; i < numInputDataBlocks; i++){
+
+		//i/o lengths
+		unsigned int compressedBlockLength = arrayCompressedBlocksLength[i];
+		unsigned int inputBlockLength = i != numInputDataBlocks - 1 ? BLOCK_SIZE : (inputFileLength % BLOCK_SIZE != 0 ? inputFileLength % BLOCK_SIZE : BLOCK_SIZE);
+
+		//writes
+		fwrite(&arrayCompressedBlocksLength[i], sizeof(unsigned int), 1, outputFile);
+		fwrite(&inputBlockLength, sizeof(unsigned int), 1, outputFile);
+		fwrite(frequency[i], sizeof(unsigned int), 256, outputFile);
+		fwrite(putputDataPtr, sizeof(unsigned char), compressedBlockLength, outputFile);
+		putputDataPtr += compressedBlockLength;
+	}
+
+	// free allocated memory
+	free(outputFile);
+	cudaFree(d_inputFileData);
+	cudaFree(d_compressedDataOffset);
+	cudaFree(d_huffmanDictionary);
+	cudaFree(d_byteCompressedData);
+	fclose(outputFile);
+}
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void cuda_compress_multiple_run_with_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength, unsigned int numKernelRuns, unsigned int *gpuOverFlowIndex, unsigned int numIntegerOverflows, unsigned int *integerOverFlowIndex){
+	printf("with Overflow and multiple run!!\n");
+
+	//gpu memory allocation
+	unsigned char *d_inputFileData;
+	unsigned char *d_byteCompressedData_overflow, *d_byteCompressedData;
+	unsigned int *d_compressedDataOffset;
+	huffmanDictionary_t *d_huffmanDictionary;
+	cudaError_t error;
+
+	//compressed data
+	unsigned int compressedFileLength = compressedDataOffset[inputFileLength] / 8;
+	unsigned int maxOverFlowByteStreamLength = compressedDataOffset[inputFileLength];
+	for(unsigned int i = 0; i < numKernelRuns; i++){
+		maxOverFlowByteStreamLength = maxOverFlowByteStreamLength > compressedDataOffset[gpuOverFlowIndex[i]] ? maxOverFlowByteStreamLength : compressedDataOffset[gpuOverFlowIndex[i]];
+		compressedFileLength += compressedDataOffset[gpuOverFlowIndex[i]] / 8;
+	}
+	unsigned int maxByteStreamLength = 0;
+	for(unsigned int i = 0; i < numIntegerOverflows; i++){
+		maxByteStreamLength = maxByteStreamLength > compressedDataOffset[integerOverFlowIndex[i]] ? maxByteStreamLength : compressedDataOffset[integerOverFlowIndex[i]];
+		compressedFileLength += compressedDataOffset[integerOverFlowIndex[i]] / 8;
+	}
+
+	unsigned char *compressedData = (unsigned char *)malloc(compressedFileLength * sizeof(unsigned char));
+
+	// allocate memory for input data, offset information and dictionary
+	unsigned int gpuInputDataAllocationLength = inputFileLength > compressedFileLength ? inputFileLength : compressedFileLength;
+	error = cudaMalloc((void **)&d_inputFileData, gpuInputDataAllocationLength * sizeof(unsigned char));
+	if (error != cudaSuccess)
+		printf("erro_input_data: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int));
+	if (error != cudaSuccess)
+		printf("erro_data_offset: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_byteCompressedData, (maxByteStreamLength) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_byteCompressedData_overflow, (maxOverFlowByteStreamLength) * sizeof(unsigned char));
+	if (error!= cudaSuccess)
+		printf("erro_byte_compressed: %s\n", cudaGetErrorString(error));
+	error = cudaMalloc((void **)&d_huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t));
+	if (error != cudaSuccess)
+		printf("erro_dictionary: %s\n", cudaGetErrorString(error));
+
+	// memory copy input data, offset information and dictionary
+	error = cudaMemcpy(d_inputFileData, inputFileData, inputFileLength * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_input_data_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_compressedDataOffset, compressedDataOffset, (inputFileLength + 1) * sizeof(unsigned int), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_data_offset_mem: %s\n", cudaGetErrorString(error));
+	error = cudaMemcpy(d_huffmanDictionary, huffmanDictionary, numInputDataBlocks * sizeof(huffmanDictionary_t), cudaMemcpyHostToDevice);
+	if (error!= cudaSuccess)
+			printf("erro_dictionary_mem: %s\n", cudaGetErrorString(error));
+
+	//call kernel
+	unsigned int writePosition = 0;
+	for(int i = 0; i < numKernelRuns - 1; i++){
+		//memset
+		error = cudaMemset(d_byteCompressedData, 0, maxByteStreamLength * sizeof(unsigned char));
+		if (error!= cudaSuccess)
+			printf("erro_memset: %s\n", cudaGetErrorString(error));
+		error = cudaMemset(d_byteCompressedData_overflow, 0, maxOverFlowByteStreamLength * sizeof(unsigned char));
+		if (error!= cudaSuccess)
+			printf("erro_memset: %s\n", cudaGetErrorString(error));
+
+		//launch
+		encode_multiple_runs_with_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, compressedDataOffset[gpuOverFlowIndex[i + 1]], numInputDataBlocks, gpuOverFlowIndex[i] / BLOCK_SIZE, gpuOverFlowIndex[i + 1] / BLOCK_SIZE, integerOverFlowIndex[i] / BLOCK_SIZE, d_byteCompressedData_overflow, inputFileLength);
+		compress_multiple_runs_with_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, compressedDataOffset[gpuOverFlowIndex[i + 1]], writePosition, integerOverFlowIndex[i] / BLOCK_SIZE, gpuOverFlowIndex[i + 1] / BLOCK_SIZE, d_byteCompressedData_overflow);
+		cudaError_t error_kernel = cudaGetLastError();
+		if (error_kernel != cudaSuccess)
+			printf("erro_kernel: %s\n", cudaGetErrorString(error_kernel));
+
+		//write position
+		writePosition += compressedDataOffset[gpuOverFlowIndex[i]] / 8 + compressedDataOffset[gpuOverFlowIndex[i]] / 8;
+	}
+
+	if(numKernelRuns == numIntegerOverflows){
+		unsigned int i = numKernelRuns - 1;
+		//memset
+		error = cudaMemset(d_byteCompressedData, 0, maxByteStreamLength * sizeof(unsigned char));
+		if (error!= cudaSuccess)
+			printf("erro_memset: %s\n", cudaGetErrorString(error));
+		error = cudaMemset(d_byteCompressedData_overflow, 0, maxOverFlowByteStreamLength * sizeof(unsigned char));
+		if (error!= cudaSuccess)
+			printf("erro_memset: %s\n", cudaGetErrorString(error));
+
+		//launch
+		encode_multiple_runs_with_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, compressedDataOffset[gpuOverFlowIndex[i + 1]], numInputDataBlocks, gpuOverFlowIndex[i] / BLOCK_SIZE, gpuOverFlowIndex[i + 1] / BLOCK_SIZE, integerOverFlowIndex[i] / BLOCK_SIZE, d_byteCompressedData_overflow, inputFileLength);
+		compress_multiple_runs_with_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, compressedDataOffset[gpuOverFlowIndex[i + 1]], writePosition, integerOverFlowIndex[i] / BLOCK_SIZE, gpuOverFlowIndex[i + 1] / BLOCK_SIZE, d_byteCompressedData_overflow);
+		cudaError_t error_kernel = cudaGetLastError();
+		if (error_kernel != cudaSuccess)
+			printf("erro_kernel: %s\n", cudaGetErrorString(error_kernel));		
+	}
+	else{
+		//memset
+		unsigned int i = numKernelRuns - 1;
+		error = cudaMemset(d_byteCompressedData, 0, maxByteStreamLength * sizeof(unsigned char));
+		if (error!= cudaSuccess)
+			printf("erro_memset: %s\n", cudaGetErrorString(error));
+
+		//launch
+		encode_multiple_runs_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_huffmanDictionary, d_byteCompressedData, inputFileLength, numInputDataBlocks, gpuOverFlowIndex[i] / BLOCK_SIZE, gpuOverFlowIndex[i + 1] / BLOCK_SIZE, inputFileLength);
+		compress_multiple_runs_no_overflow<<<GRID_DIM, BLOCK_DIM>>>(d_inputFileData, d_compressedDataOffset, d_byteCompressedData, gpuOverFlowIndex[i + 1], writePosition);
+		cudaError_t error_kernel = cudaGetLastError();
+		if (error_kernel != cudaSuccess)
+			printf("erro_kernel: %s\n", cudaGetErrorString(error_kernel));
+	}
+
+	// copy compressed data from GPU to CPU memory
+	error = cudaMemcpy(compressedData, d_inputFileData, compressedFileLength * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+	if (error != cudaSuccess)
+		printf("erro_copy_compressed_data: %s\n", cudaGetErrorString(error));
+
+	//write to output file
+	FILE *outputFile = fopen(outputFileName, "wb");
+	unsigned char *putputDataPtr = compressedData;
+	for(unsigned int i = 0; i < numInputDataBlocks; i++){
+
+		//i/o lengths
+		unsigned int compressedBlockLength = arrayCompressedBlocksLength[i];
+		unsigned int inputBlockLength = i != numInputDataBlocks - 1 ? BLOCK_SIZE : (inputFileLength % BLOCK_SIZE != 0 ? inputFileLength % BLOCK_SIZE : BLOCK_SIZE);
+
+		//writes
+		fwrite(&arrayCompressedBlocksLength[i], sizeof(unsigned int), 1, outputFile);
+		fwrite(&inputBlockLength, sizeof(unsigned int), 1, outputFile);
+		fwrite(frequency[i], sizeof(unsigned int), 256, outputFile);
+		fwrite(putputDataPtr, sizeof(unsigned char), compressedBlockLength, outputFile);
+		putputDataPtr += compressedBlockLength;
+	}
+
+	// free allocated memory
+	free(outputFile);
+	cudaFree(d_inputFileData);
+	cudaFree(d_compressedDataOffset);
+	cudaFree(d_huffmanDictionary);
+	cudaFree(d_byteCompressedData);
+	cudaFree(d_byteCompressedData_overflow);
+	fclose(outputFile);
+}

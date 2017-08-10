@@ -54,14 +54,36 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 unsigned int compute_mem_offset(unsigned int *frequency, huffmanDictionary_t *huffmanDictionary);
-void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowIndex, unsigned int *numIntegerOverflows);
+void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowBlockIndex, unsigned int *numIntegerOverflows, unsigned int *kernelOverFlowBlockIndex, unsigned int *numKernelRuns, long unsigned int *mem_used, long unsigned int mem_avail);
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+int build_compressed_data_offset(unsigned int *compressedDataOffset, unsigned int *inputBlocksIndex, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, unsigned char *inputBlockData, unsigned int inputFileLength, unsigned char *inputFileData, unsigned int *numIntegerOverflows,  unsigned int *integerOverFlowIndex, unsigned int *numKernelRuns,  unsigned int *kernelOverFlowBlockIndex, long unsigned int mem_avail);
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+void cuda_compress_single_run_no_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength);
+void cuda_compress_single_run_with_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength, unsigned int integerOverFlowIndex);
+void cuda_compress_multiple_run_no_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength, unsigned int numKernelRuns, unsigned int *gpuOverFlowIndex);
+void cuda_compress_multiple_run_with_overflow(unsigned int inputFileLength, unsigned int numInputDataBlocks, unsigned char *inputFileData, unsigned int *compressedDataOffset, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, char *outputFileName, unsigned int *arrayCompressedBlocksLength, unsigned int numKernelRuns, unsigned int *gpuOverFlowIndex, unsigned int numIntegerOverflows, unsigned int *integerOverFlowIndex);
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 __global__ void encode_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int numInputDataBlocks);
 __global__ void compress_single_run_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int inputFileLength);
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
-
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
 __global__ void encode_single_run_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int numInputDataBlocks, unsigned int overFlowBlock, unsigned char *d_byteCompressedData_overflow);
 __global__ void compress_single_run_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int d_inputFileLength, unsigned int overFlowBlock, unsigned char *d_byteCompressedData_overflow);
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+__global__ void	encode_multiple_runs_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputBlockLength, unsigned int numInputDataBlocks, unsigned int lowerBlock, unsigned int upperBlock, unsigned int d_inputFileLength);
+__global__ void compress_multiple_runs_no_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int d_inputBlockLength, unsigned int d_writePosition);
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------------------------------------------------------------*/
+__global__ void	encode_multiple_runs_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, huffmanDictionary_t *d_huffmanDictionary, unsigned char *d_byteCompressedData, unsigned int d_inputBlockLength, unsigned int numInputDataBlocks, unsigned int lowerBlock, unsigned int upperBlock, unsigned int overFlowBlock, unsigned char *d_byteCompressedData_overflow, unsigned int d_inputFileLength);
+__global__ void	compress_multiple_runs_with_overflow(unsigned char *d_inputFileData, unsigned int *d_compressedDataOffset, unsigned char *d_byteCompressedData, unsigned int d_inputBlockLength, unsigned int d_writePosition, unsigned int overFlowBlock, unsigned int upperBlock, unsigned char *d_byteCompressedData_overflow);
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
