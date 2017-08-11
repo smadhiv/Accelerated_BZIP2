@@ -166,7 +166,7 @@ unsigned int huffman_encoding(unsigned int *frequency, unsigned int inputBlockLe
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 //create offset array to write bit sequence
-void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowBlockIndex, unsigned int *numIntegerOverflows, unsigned int *kernelOverFlowIndex, unsigned int *numKernelRuns, long unsigned int *mem_used, long unsigned int mem_avail){
+void create_data_offset_array(int index, unsigned int *compressedDataOffset, unsigned char* inputBlockData, unsigned int inputBlockLength, huffmanDictionary_t *huffmanDictionary, unsigned int *integerOverFlowIndex, unsigned int *numIntegerOverflows, unsigned int *gpuOverFlowIndex, unsigned int *numKernelRuns, long unsigned int *mem_used, long unsigned int mem_avail){
 	
 	compressedDataOffset[0] = 0;
 	unsigned int *dataOffsetIndex = compressedDataOffset + index;
@@ -175,14 +175,14 @@ void create_data_offset_array(int index, unsigned int *compressedDataOffset, uns
 		dataOffsetIndex[i + 1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[i]] + dataOffsetIndex[i];
 		if((*mem_used) + dataOffsetIndex[i + 1]  + 16 * 1024 > mem_avail){
 			printf("overflow happened\n");
-			kernelOverFlowIndex[(*numKernelRuns)] = index;
+			gpuOverFlowIndex[(*numKernelRuns)] = index;
 			(*numKernelRuns)++;
 			dataOffsetIndex[1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[0]];
 			i = 0;
 			*mem_used = 0;
 		}
 		else if (dataOffsetIndex[i + 1] + 16 * 1024 < dataOffsetIndex[i]){
-			integerOverFlowBlockIndex[(*numIntegerOverflows)] = index;
+			integerOverFlowIndex[(*numIntegerOverflows)] = index;
 			(*numIntegerOverflows)++;
 			dataOffsetIndex[1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[0]];
 			i = 0;
@@ -196,7 +196,7 @@ void create_data_offset_array(int index, unsigned int *compressedDataOffset, uns
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------*/
 
-int build_compressed_data_offset(unsigned int *compressedDataOffset, unsigned int *inputBlocksIndex, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, unsigned char *inputBlockData, unsigned int inputFileLength, unsigned char *inputFileData, unsigned int *numIntegerOverflows,  unsigned int *integerOverFlowIndex, unsigned int *numKernelRuns,  unsigned int *kernelOverFlowIndex, long unsigned int mem_avail){
+int build_compressed_data_offset(unsigned int *compressedDataOffset, unsigned int *inputBlocksIndex, huffmanDictionary_t *huffmanDictionary, unsigned int **frequency, unsigned char *inputBlockData, unsigned int inputFileLength, unsigned char *inputFileData, unsigned int *numIntegerOverflows,  unsigned int *integerOverFlowIndex, unsigned int *numKernelRuns,  unsigned int *gpuOverFlowIndex, long unsigned int mem_avail){
 //process input file
 	unsigned int currentBlockIndex = 0;
 	long unsigned int mem_used = 0;
@@ -231,7 +231,7 @@ int build_compressed_data_offset(unsigned int *compressedDataOffset, unsigned in
 		// build table having the bitSequence sequence and its length
 		unsigned char bitSequence[255], bitSequenceLength = 0;
 		build_huffman_dictionary(head_huffmanTreeNode, bitSequence, bitSequenceLength, &huffmanDictionary[currentBlockIndex]);
-		create_data_offset_array((inputBlockPointer - inputFileData - inputBlockLength), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[currentBlockIndex], integerOverFlowIndex, numIntegerOverflows, kernelOverFlowIndex, numKernelRuns, &mem_used, mem_avail);
+		create_data_offset_array((inputBlockPointer - inputFileData - inputBlockLength), compressedDataOffset, inputBlockData, inputBlockLength, &huffmanDictionary[currentBlockIndex], integerOverFlowIndex, numIntegerOverflows, gpuOverFlowIndex, numKernelRuns, &mem_used, mem_avail);
 		inputBlocksIndex[currentBlockIndex + 1] = compressedDataOffset[inputBlockPointer - inputFileData];
 		currentBlockIndex++;
 		if(numKernelRuns < numIntegerOverflows || (*numKernelRuns) > 9 || (*numIntegerOverflows) > 9){
