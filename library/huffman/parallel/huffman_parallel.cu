@@ -173,7 +173,8 @@ void create_data_offset_array(int index, unsigned int *compressedDataOffset, uns
 	unsigned int i = 0;
 	while(i < inputBlockLength){
 		dataOffsetIndex[i + 1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[i]] + dataOffsetIndex[i];
-		if((*mem_used) + dataOffsetIndex[i + 1] > mem_avail){
+		if((*mem_used) + dataOffsetIndex[i + 1]  + 16 * 1024 > mem_avail){
+			printf("overflow happened\n");
 			kernelOverFlowIndex[(*numKernelRuns)] = index;
 			(*numKernelRuns)++;
 			dataOffsetIndex[1] = (*huffmanDictionary).bitSequenceLength[inputBlockData[0]];
