@@ -313,7 +313,7 @@ void cuda_compress_single_run_no_overflow(unsigned int inputFileLength, unsigned
 	}
 
 	// free allocated memory
-	free(outputFile);
+	free(compressedData);
 	cudaFree(d_inputFileData);
 	cudaFree(d_compressedDataOffset);
 	cudaFree(d_huffmanDictionary);
@@ -499,7 +499,7 @@ void cuda_compress_multiple_run_no_overflow(unsigned int inputFileLength, unsign
 	}
 
 	// free allocated memory
-	free(outputFile);
+	free(compressedData);
 	cudaFree(d_inputFileData);
 	cudaFree(d_compressedDataOffset);
 	cudaFree(d_huffmanDictionary);
@@ -639,7 +639,7 @@ void cuda_compress_multiple_run_with_overflow(unsigned int inputFileLength, unsi
 	}
 
 	// free allocated memory
-	free(outputFile);
+	free(compressedData);
 	cudaFree(d_inputFileData);
 	cudaFree(d_compressedDataOffset);
 	cudaFree(d_huffmanDictionary);
