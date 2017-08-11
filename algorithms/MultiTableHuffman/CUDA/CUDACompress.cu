@@ -110,7 +110,7 @@ int main(int argc, char **argv){
 	else if(numKernelRuns != 1 && numIntegerOverflows == 0){
 		cuda_compress_multiple_run_no_overflow(inputFileLength, numInputDataBlocks, inputFileData, compressedDataOffset, huffmanDictionary, frequency, argv[2], arrayCompressedBlocksLength, numKernelRuns, gpuOverFlowIndex);
 	}
-	else if(numKernelRuns != 1 && numIntegerOverflows != 0){
+	else if(numKernelRuns != 1 && numIntegerOverflows > 0){
 		cuda_compress_multiple_run_with_overflow(inputFileLength, numInputDataBlocks, inputFileData, compressedDataOffset, huffmanDictionary, frequency, argv[2], arrayCompressedBlocksLength, numKernelRuns, gpuOverFlowIndex, numIntegerOverflows, integerOverFlowIndex);
 	}
 
